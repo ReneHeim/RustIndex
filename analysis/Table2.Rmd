@@ -1,0 +1,26 @@
+---
+title: "Table2"
+output: word_document
+---
+
+```{r include=FALSE}
+feature.set <- readRDS('/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/data/temp/featuresforindex.rds')
+model.1.m <- readRDS('/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/data/temp/coefficients.rds')
+acc_fin.m <- readRDS('/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/data/temp/Table1.rds')
+
+best.bands.m <- readRDS('/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/data/temp/bestbands.rds')
+    best.bands.m <- gsub("X", "", best.bands.m)
+```
+
+```{r results='asis', echo= FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+table2 <- acc_fin.m
+roundvals <- round(table2[,2:6], 2) 
+
+table2 <- cbind("model"=acc_fin.m[,1], roundvals[,1:4])
+table2 <- rename(table2, OA=PCC)
+```
+
+```{r results='asis', echo= FALSE, message=FALSE, warning=FALSE}
+knitr::kable(table2, caption = "**Table 2** Accuracy assessment of the LMMR index compared to other spectral indices that have been applied to detect pathogen related stress. Accuracy is assessed for the capability of an index to discriminate between fungicide Treated and Infected plants. Negative values do not represent that the according index has less than zero predictive power but that it classifies treated and untreated in the other direction of the LMMR.")
+```

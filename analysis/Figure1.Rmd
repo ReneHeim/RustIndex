@@ -1,0 +1,10 @@
+---
+title: "Figure1"
+author: "Rene Heim"
+date: "October 9, 2017"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+![**Figure 1** A representation of fungicide treated (A) and untreated (B,C,D) *Backhousia citriodora* leaves that have been assessed on the plantation. Trees that had been treated with fungicides had only few necrotic lesions on older leaves (A). If young leaves were infected, the fungus could not spread far across the leaf surface as fungicide treatments had been done regulary. Leaves that were not treated were largely covered with dark necrotic lesions as the fungus was not contained (B). These lesions originated from fresh infection sites (C,D) that had been left untreated. A closeup of the adaxial (C) and abaxial (D) untreated leaf surfaces shows that myrtle rust is producing yellow urediniospores mostly on the abaxial surface (D). These fresh infection sites are also visible on the adaxial (C) surface and visible through pink/red flecking. On treated leaves, these infection spots were not present.](/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/output/figures/plantationleaves.png)

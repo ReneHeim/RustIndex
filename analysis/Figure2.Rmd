@@ -1,0 +1,10 @@
+---
+title: "Figure2"
+author: "Rene Heim"
+date: "October 9, 2017"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+![**Figure 2** Analysis workflow to visualize each waveband selection step (Box 1-3), the buidling step of the new lemon myrtle/myrtle rust index (LMMR) and a final step to compare the predictive performance of the LMMR to other suitable indices to predict myrtle rust infections on lemon myrtle trees.](/mnt/01D2041CF6D7F830/PhD/Projects/02_RustIndex/output/figures/Figure2_workflow.png)
