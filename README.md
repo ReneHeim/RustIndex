@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Heim_et_al_2017
 
 __Supporting Information:__  
@@ -25,3 +26,4 @@ Contact rene.heim@hdr.mq.edu.au for any further information.
 
 * This repository follows the principles of reproducible research ([Peng, 2011](http://www.sciencemag.org/content/334/6060/1226)).
  
+
