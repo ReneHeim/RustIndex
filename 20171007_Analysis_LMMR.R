@@ -1,6 +1,6 @@
 ####
 # This code is generating a specific spectral disease index for the pathosystem
-# Austropuccinia psidii and Backhousia citriodora. Therefore, it utilizes a 
+# Austropuccinia psidii and Backhousia citriodora. It utilizes a 
 # spectral dataset containing following columns:
 #
 # Type= Categorical variables referring to spectral class to be classified.
@@ -20,7 +20,7 @@ install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
                    "VSURF"))
 
-Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') 
+#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') 
 
 library(cowplot)
 library(gdata)
@@ -32,6 +32,7 @@ library(prospectr)
 library(rJava)
 library(tidyverse)
 library(VSURF)
+library(reshape2)
 
 source('R/raw2speclib_hsdar.R')
 source('R/DropCatVar_July2017.R')
@@ -43,17 +44,12 @@ source('R/index2prob_test.R')
 
 # Set Project Structure --------------------------------------------------------
 
-
 dir.create('data', FALSE, FALSE)
 dir.create('R', FALSE, FALSE)
 dir.create('doc', FALSE, FALSE)
-dir.create('figs', FALSE, FALSE)
 dir.create('output', FALSE, FALSE)
 
-
-
 # Loading and Preparing Data ---------------------------------------------------
-
 
 ori.data <- read.csv('data/data.wo.out.binned.cut.csv')
 
@@ -97,12 +93,12 @@ index_vals <-
 result_df <-
     cbind('Type' = df.bands$Type, index_vals) # Attach LMMR values to dataframe
 
-result_df <- rename(result_df, LMMR = index_val)
+names(result_df)[2] <- c('LMMR') #Rename col name
 
 modelcoeffs <- coef(model.1) # Extracting model coefficients for LMMR design
 
-saveRDS(modelcoeffs, 'output/coefficients.rds') # Export for future use
-saveRDS(best.bands, 'output/bestbands.rds') # Export for future use
+#saveRDS(modelcoeffs, 'output/coefficients.rds') # Export for future use
+#saveRDS(best.bands, 'output/bestbands.rds') # Export for future use
 
 
 # Attach Indices to Compare to LMMR  -------------------------------------------
@@ -120,10 +116,11 @@ spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 #RVSI <- '(((R712) + (R752))/2) − (R732)' #Red_Edge Vegetation Stress Index
 NBNDVI <- '(R850-R680)/(R850+R680)'
 #SIPI <- '(R800-R445)/(R800+R680)'
+LMMR2 <- '((R545/R555)^(5/3))*(R1485/R2175)'
 
 # ?vegindex OPTIONAL: Call indices known by the hsdar pkg
 
-ind <- c("PRI", "MCARI", NBNDVI) # add more indices HERE (some known by hsdar)
+ind <- c("PRI", "MCARI", NBNDVI, LMMR2) # add more indices HERE (some known by hsdar)
 
 
 for (i in ind) {
@@ -132,7 +129,7 @@ for (i in ind) {
     
 } 
 
-ind.c <- c('PRI', 'MCARI', 'NBNDVI') #manipulate if necessary
+ind.c <- c('PRI', 'MCARI', 'NBNDVI', 'LMMR2') #manipulate if necessary
 
 colnames(result_df)[3:length(result_df)] <- ind.c
 
@@ -163,15 +160,16 @@ for (i in indi) {
 
 
 p1 <- plot_grid(
-    plot_list[[1]],
     plot_list[[2]],
     plot_list[[3]],
     plot_list[[4]],
+    plot_list[[5]],
     labels = c("a", 'b', 'c', 'd'),
-    ncol = 2,
-    nrow = 2
+    ncol = 4,
+    nrow = 1
 )
 p1
+
 ggsave(
     "output/LMMR_compare_v2.pdf",
     plot = p1,
@@ -181,6 +179,25 @@ ggsave(
     dpi = 400
 )
 
+# Spectra plots
+
+source('R/prepgg_June2017.R')
+
+spectra.gg <- prep.gg(tospectra)
+
+pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
+  geom_line(size = .2)+
+  theme_set(theme_bw(base_size = 25))
+
+m <- rbind(c(1, 1, 1, 1), c(2, 3, 4, 5))
+layout(m)
+print(m)
+layout.show(5)
+pspec
+plot_list[[2]]
+plot_list[[3]]
+plot_list[[4]]
+plot_list[[5]]
 
 # Calculate Accuracy Metrics ---------------------------------------------------
 
@@ -190,7 +207,7 @@ result_df$Type <-
 
 myDat <- cbind(ID = seq(1, dim(result_df)[1]), result_df)
 
-myCMX <- cmx(myDat)
+myCMX <- cmx(myDat) #Select columns here to get confusion matrix
 
 acc <- presence.absence.accuracy(myDat)
 
