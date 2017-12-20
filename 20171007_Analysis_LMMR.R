@@ -69,11 +69,11 @@ data.log[names(data.log)[-1]] <-
 
     # First step using VSURF
 
-#feature.set <- 
-    #VSURF(data.log[,2:2152], data.log[,1], clusterType = "FORK", ntree = 2000, 
-          #mtry = 50) Takes a while, therefore saved/loaded as .rds
-
+# feature.set <- 
+#     VSURF(data.log[,2:2152], data.log[,1], clusterType = "FORK", ntree = 2000, 
+#           mtry = 50) #Takes a while, therefore saved/loaded as .rds
 # saveRDS(feature.set,'output')
+
 feature.set <- readRDS('output/featuresforindex.rds') 
 
     # Second step using glmulti
