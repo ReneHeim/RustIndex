@@ -33,6 +33,7 @@ library(rJava)
 library(tidyverse)
 library(VSURF)
 library(reshape2)
+library(gridExtra)
 
 source('R/raw2speclib_hsdar.R')
 source('R/DropCatVar_July2017.R')
@@ -110,6 +111,10 @@ tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
+ID4spectra <- as.numeric(names(tospectra[2:202]))
+
+spectra@ID
+
 # Define spectral vegetation indices to use them in hsdar pkg
 
 #ARI <-  '((R550)^−1) − ((R700)^−1)' #Anthocyanin Reflectance Index
@@ -154,7 +159,8 @@ for (i in indi) {
             legend.position = "none"
         ) +
         xlab(label = paste(i)) +
-        ylab(label = 'Disease Prob.')
+        ylab(label = 'Index Value')+
+        ylim(0, 1)
 }
 
 
@@ -181,23 +187,66 @@ ggsave(
 
 # Spectra plots
 
-source('R/prepgg_June2017.R')
+source('R/prepgg_December2017.R')
 
 spectra.gg <- prep.gg(tospectra)
 
 pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
-  geom_line(size = .2)+
-  theme_set(theme_bw(base_size = 25))
+  geom_line(size = .5)+
+  annotate(
+    "rect",
+    xmin = 500,
+    xmax = 570,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'green'
+  ) +
+  theme_set(theme_bw(base_size = 20))+
+  theme(legend.position = c(.90, .88), legend.title = element_blank(), legend.background = element_blank())
 
-m <- rbind(c(1, 1, 1, 1), c(2, 3, 4, 5))
-layout(m)
-print(m)
-layout.show(5)
-pspec
-plot_list[[2]]
-plot_list[[3]]
-plot_list[[4]]
-plot_list[[5]]
+p5 <- plot_list[[2]]
+p5 <- p5+
+  theme(#axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank())
+p6 <- plot_list[[3]]
+p6 <- p6+
+  theme(#axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank())
+p7 <- plot_list[[4]]
+p7 <- p7+
+  theme(#axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank())
+p8 <- plot_list[[5]]
+p8 <- p8+
+  theme(#axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank())+
+    labs(x = "LMMR")
+
+plot.res <- ggdraw() +
+  draw_plot(p5, x = 0, y = .5, width = .25, height = .5) +
+  draw_plot(p6, x = .25, y = .5, width = .25, height = .5) +
+  draw_plot(p7, x = .5, y = .5, width = .25, height = .5) +
+  draw_plot(p8, x = .75, y = .5, width = .25, height = .5) +
+  draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
+  draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 12,
+                  x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
+
+ggsave(
+  "output/Results.pdf",
+  plot = plot.res,
+  width = 40,
+  height = 20,
+  units = "cm",
+  dpi = 400
+)
 
 # Calculate Accuracy Metrics ---------------------------------------------------
 
