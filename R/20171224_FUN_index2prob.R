@@ -1,3 +1,8 @@
+####
+# This function calculates vegetation index values and performs a logistic regression to 
+# result in disease probabilities.
+####
+
 Index2Prob <- function(dat, specdat, index){
     
     SVI <- vegindex(specdat, index)
