@@ -13,12 +13,12 @@
 ####
 
 
-# Loading Packages and Functions------------------------------------------------
+# 1. Loading Packages and Functions------------------------------------------------
 
 
 install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
-                   "VSURF"))
+                   "VSURF", "reshape2", "caret"))
 
 #Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') 
 
@@ -33,77 +33,115 @@ library(rJava)
 library(tidyverse)
 library(VSURF)
 library(reshape2)
-library(gridExtra)
-
-source('R/raw2speclib_hsdar.R')
-source('R/DropCatVar_July2017.R')
-source('R/ModelSelect.R')
-source('R/LMMRindex.R')
-source('R/LMMRloop.R')
-source('R/index2prob_test.R')
+library(caret)
 
 
-# Set Project Structure --------------------------------------------------------
+source('R/20171224_FUN_raw2speclibhsdar.R')
+source('R/20170601_FUN_DropCatVar.R')
+source('R/20171224_FUN_ModelSelect.R')
+source('R/2011224_FUN_LMMRindex.R')
+source('R/20171224_FUN_LMMRloop.R')
+source('R/20171224_FUN_index2prob.R')
+source('R/20170601_FUN_exportVSURF.R')
+source('R/20171224_FUN_glm2df.R')
+
+#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
+
+# 2. Set Project Structure --------------------------------------------------------
 
 dir.create('data', FALSE, FALSE)
 dir.create('R', FALSE, FALSE)
 dir.create('doc', FALSE, FALSE)
 dir.create('output', FALSE, FALSE)
 
-# Loading and Preparing Data ---------------------------------------------------
 
-ori.data <- read.csv('data/data.wo.out.binned.cut.csv')
+# 3. Loading and Preparing Data ---------------------------------------------------
 
-levels(ori.data$Type)
+ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
-data.log <- DropClass(ori.data, ori.data$Type, 'Healthy') # Drop healthy leaves
+levels(ori.data$Type) #Check levels of categorical response 
+
+data.log <- DropClass(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
 
 data.log$Type <-
-    as.numeric(data.log$Type == 'Untreated') # 1 = treated; 0 = untreated
+    as.numeric(data.log$Type == 'Untreated') #Transform remaining factor levels into 1 and 0 
 
 data.log[names(data.log)[-1]] <-
-    log(data.log[names(data.log)[-1]]) # logs frequencies
+    log(data.log[names(data.log)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
 
 
-# Selecting Subset of Relevant Wavebands ---------------------------------------
+# 4. Selecting Subset of Relevant Wavebands ---------------------------------------
 
-    # First step using VSURF
+    # A) VSURF Feature Selection (Runs ~30 hours)
 
+# feature.set <- list()
+# runs <- seq(1,10,1)
+# for(i in runs){
+#   
+#   feature.set[[i]] <-
+#          VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000,
+#                mtry = 50) #Takes ~3h, therefore saved/loaded as .rds
+#   
+# }
+# saveRDS(feature.set, 'output/features.rds')
+
+feature.set <- readRDS('output/features.rds') # B) Load features as A) runs a while
+
+    # C) VSURF outputs column indices (1,2..), therefore turn into waveband names (500, 505...)
+
+runs <- seq(1,10,1) #Create sequence depending on length of feature.set
+res <- list() #Create output object
+
+<<<<<<< HEAD
 # feature.set <- 
 #     VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000, 
 #           mtry = 50) #Takes a while, therefore saved/loaded as .rds
 # 
 #  saveRDS(feature.set,'output')
 feature.set <- readRDS('output/featuresforindex.rds') 
+=======
+for(i in runs){
+  res[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data.log[, 2:202])
+  }
 
-    # Second step using glmulti
+VSURF.selection <- unlist(res) #Unlist list to create a vector containing all selected bands
+VSURF.selection <- sort(unique(VSURF.selection)) #Only select unique bands from vector and sort
+>>>>>>> b778ff6b4409103dac1f30a8f3335f57db8cd695
 
-model.1 <- GLM.featureselect(data.log, feature.set)
+
+# 5. Model Selection ---------------------------------------------------------
+
+model.1 <- GLM.featureselect(data.log, VSURF.selection)
 
 best.bands <-
-    row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)]
+  row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)]
 
 df.bands <-
-    cbind('Type' = ori.data$Type, ori.data[best.bands])
+  cbind('Type' = ori.data$Type, ori.data[best.bands]) #Select only best bands cols from df
 
 df.bands <- DropClass(df.bands, df.bands$Type, "Healthy")
 
 index_vals <-
-    index4col(df.bands[, 2:5], model.1) # Function that generates LMMR values
+  index4col(df.bands[, 2:5], model.1) # Function that generates LMMR values
 
 result_df <-
-    cbind('Type' = df.bands$Type, index_vals) # Attach LMMR values to dataframe
+  cbind('Type' = df.bands$Type, index_vals) # Attach LMMR values to dataframe
 
 names(result_df)[2] <- c('LMMR') #Rename col name
 
-modelcoeffs <- coef(model.1) # Extracting model coefficients for LMMR design
+mod.out <- list()
 
-#saveRDS(modelcoeffs, 'output/coefficients.rds') # Export for future use
-#saveRDS(best.bands, 'output/bestbands.rds') # Export for future use
+mod.out[['BestBands']] <- best.bands
+mod.out[['Coefficients']] <- coef(model.1)
+mod.out[['IndexDF']] <- result_df
+
+saveRDS(mod.out, 'output/modeloutput.rds') # Export for future use
 
 
-# Attach Indices to Compare to LMMR  -------------------------------------------
 
+# 6. Build spectral library and compute indices ------------------------------
+
+    # A) Build spectral library
 
 tospectra <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
 
@@ -111,18 +149,22 @@ tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
+<<<<<<< HEAD
 # Define spectral vegetation indices to use them in hsdar pkg
+=======
+
+    # B) Define spectral vegetation indices according to 'hsdar' pkg style
+>>>>>>> b778ff6b4409103dac1f30a8f3335f57db8cd695
 
 #ARI <-  '((R550)^−1) − ((R700)^−1)' #Anthocyanin Reflectance Index
 #RVSI <- '(((R712) + (R752))/2) − (R732)' #Red_Edge Vegetation Stress Index
 NBNDVI <- '(R850-R680)/(R850+R680)'
 #SIPI <- '(R800-R445)/(R800+R680)'
-LMMR2 <- '((R545/R555)^(5/3))*(R1485/R2175)'
+LMMR2 <- '((R545/R555)^(5/3))*(R1505/R2195)'
 
-# ?vegindex OPTIONAL: Call indices known by the hsdar pkg
+ind <- c("PRI", "MCARI", NBNDVI, LMMR2) # Add self-defined or hsdar pkg indices here (?vegindex)
 
-ind <- c("PRI", "MCARI", NBNDVI, LMMR2) # add more indices HERE (some known by hsdar)
-
+    # C) Build df containing disease probabilities for each vegetation index
 
 for (i in ind) {
     result_df[[paste(i, 'prob', sep = "_")]] <-
@@ -130,13 +172,13 @@ for (i in ind) {
     
 } 
 
-ind.c <- c('PRI', 'MCARI', 'NBNDVI', 'LMMR2') #manipulate if necessary
+ind.c <- c('PRI', 'MCARI', 'NBNDVI', 'LMMRopt') # Choose suitable column names
 
 colnames(result_df)[3:length(result_df)] <- ind.c
 
-write_csv(result_df,'output/result_df.csv')
+write_csv(result_df,'output/vegindex_df.csv')
 
-# Visualize Results ------------------------------------------------------------
+# 7. Visualize Results ------------------------------------------------------------
 
 plot_list <- list()
 indi <- names(result_df[, 2:length(result_df)])
