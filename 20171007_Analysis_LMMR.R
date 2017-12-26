@@ -70,10 +70,10 @@ data.log[names(data.log)[-1]] <-
     # First step using VSURF
 
 # feature.set <- 
-#     VSURF(data.log[,2:2152], data.log[,1], clusterType = "FORK", ntree = 2000, 
+#     VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000, 
 #           mtry = 50) #Takes a while, therefore saved/loaded as .rds
-# saveRDS(feature.set,'output')
-
+# 
+#  saveRDS(feature.set,'output')
 feature.set <- readRDS('output/featuresforindex.rds') 
 
     # Second step using glmulti
@@ -110,10 +110,6 @@ tospectra <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
 tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
-
-ID4spectra <- as.numeric(names(tospectra[2:202]))
-
-spectra@ID
 
 # Define spectral vegetation indices to use them in hsdar pkg
 
@@ -176,14 +172,6 @@ p1 <- plot_grid(
 )
 p1
 
-ggsave(
-    "output/LMMR_compare_v2.pdf",
-    plot = p1,
-    width = 40,
-    height = 20,
-    units = "cm",
-    dpi = 400
-)
 
 # Spectra plots
 
