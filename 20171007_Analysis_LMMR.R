@@ -44,6 +44,7 @@ source('R/20171224_FUN_LMMRloop.R')
 source('R/20171224_FUN_index2prob.R')
 source('R/20170601_FUN_exportVSURF.R')
 source('R/20171224_FUN_glm2df.R')
+source('R/20171224_FUN_prepggwide2long.R')
 
 #Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
 
@@ -92,21 +93,12 @@ feature.set <- readRDS('output/features.rds') # B) Load features as A) runs a wh
 runs <- seq(1,10,1) #Create sequence depending on length of feature.set
 res <- list() #Create output object
 
-<<<<<<< HEAD
-# feature.set <- 
-#     VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000, 
-#           mtry = 50) #Takes a while, therefore saved/loaded as .rds
-# 
-#  saveRDS(feature.set,'output')
-feature.set <- readRDS('output/featuresforindex.rds') 
-=======
 for(i in runs){
   res[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data.log[, 2:202])
   }
 
 VSURF.selection <- unlist(res) #Unlist list to create a vector containing all selected bands
 VSURF.selection <- sort(unique(VSURF.selection)) #Only select unique bands from vector and sort
->>>>>>> b778ff6b4409103dac1f30a8f3335f57db8cd695
 
 
 # 5. Model Selection ---------------------------------------------------------
@@ -137,6 +129,21 @@ mod.out[['IndexDF']] <- result_df
 
 saveRDS(mod.out, 'output/modeloutput.rds') # Export for future use
 
+    # A) Do 95% confint for coefficient pairs overlap?
+
+y = coef(model.1)
+x = seq_along(y)
+ci = confint(model.1)
+xlim = range(x) + c(-0.5,0.2)
+ylim = range(ci)
+ylim = ylim + 0.1*c(-1,+1)*diff(ylim) # extend it a little
+ylab = bquote(hat(beta))
+xlab = "coefficient"
+par(mar=c(4.5,5,1,1), las=1)
+plot(y, pch=16, xlim=xlim, ylim=ylim, xlab=xlab, ylab=ylab, xaxt="n", bty="n")
+axis(1, at=x, labels=names(y), tick=FALSE)
+abline(h=0, lty=3)
+arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 
 
 # 6. Build spectral library and compute indices ------------------------------
@@ -149,12 +156,9 @@ tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
-<<<<<<< HEAD
-# Define spectral vegetation indices to use them in hsdar pkg
-=======
 
     # B) Define spectral vegetation indices according to 'hsdar' pkg style
->>>>>>> b778ff6b4409103dac1f30a8f3335f57db8cd695
+
 
 #ARI <-  '((R550)^−1) − ((R700)^−1)' #Anthocyanin Reflectance Index
 #RVSI <- '(((R712) + (R752))/2) − (R732)' #Red_Edge Vegetation Stress Index
@@ -217,7 +221,6 @@ p1
 
 # Spectra plots
 
-source('R/prepgg_December2017.R')
 
 spectra.gg <- prep.gg(tospectra)
 
