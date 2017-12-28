@@ -43,7 +43,7 @@ source('R/2011224_FUN_LMMRindex.R')
 source('R/20171224_FUN_LMMRloop.R')
 source('R/20171224_FUN_index2prob.R')
 source('R/20170601_FUN_exportVSURF.R')
-source('R/20171224_FUN_glm2df.R')
+source('R/20171224_FUN_glm2df.R') ### ERROR not available
 source('R/20171224_FUN_prepggwide2long.R')
 
 #Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
@@ -73,7 +73,7 @@ data.log[names(data.log)[-1]] <-
 
 # 4. Selecting Subset of Relevant Wavebands ---------------------------------------
 
-    # A) VSURF Feature Selection (Runs ~30 hours)
+    # A) VSURF Feature Selection (Runs ~30 hours) ## really? not only 3 see line 84
 
 # feature.set <- list()
 # runs <- seq(1,10,1)
@@ -293,7 +293,7 @@ myCMX <- cmx(myDat) #Select columns here to get confusion matrix
 
 acc <- presence.absence.accuracy(myDat)
 
-acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)]
+acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)] ### maybe round by 3?
 
 saveRDS(acc_fin, 'data/Table1.rds')
 
