@@ -20,7 +20,9 @@ install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
                    "VSURF", "reshape2", "caret"))
 
-#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') 
+#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
+
+# Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir.
 
 library(cowplot)
 library(gdata)
@@ -43,7 +45,6 @@ source('R/2011224_FUN_LMMRindex.R')
 source('R/20171224_FUN_LMMRloop.R')
 source('R/20171224_FUN_index2prob.R')
 source('R/20170601_FUN_exportVSURF.R')
-source('R/20171224_FUN_glm2df.R') ### ERROR not available
 source('R/20171224_FUN_prepggwide2long.R')
 
 #Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
@@ -191,7 +192,7 @@ for (i in indi) {
     plot_list[[i]] <-
         ggplot(result_df,
                aes_string(result_df$Type, result_df[, i], colour = result_df$Type)) +
-        geom_jitter(height = 0) +
+        geom_jitter(aes(shape=Type),height = 0) +
         geom_boxplot(colour = 'black',
                      alpha = 0.5,
                      outlier.alpha = 0) +
@@ -222,10 +223,15 @@ p1
 # Spectra plots
 
 
-spectra.gg <- prep.gg(tospectra)
+spectra.gg <- prep.gg(tospectra) # Transforms wide to long for ggplot2 readibility
+
+# Subplot E (Spectra including spectral regions and best bands)
+
+bands4gg <-as.numeric(gsub('X', '', best.bands))
 
 pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
-  geom_line(size = .5)+
+  geom_line(aes(linetype=Type), size = 1)+
+  geom_point(aes(shape=Type), size = 2)+
   annotate(
     "rect",
     xmin = 500,
@@ -235,14 +241,93 @@ pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
     alpha = .2,
     fill = 'green'
   ) +
+  annotate(
+    "rect",
+    xmin = 570,
+    xmax = 590,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'yellow'
+  ) +
+  annotate(
+    "rect",
+    xmin = 590,
+    xmax = 610,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'orange'
+  ) +
+  annotate(
+    "rect",
+    xmin = 610,
+    xmax = 700,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = c("red")
+  ) +
+  annotate(
+    "rect",
+    xmin = 700,
+    xmax = 1300,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = c("lightgrey")
+  ) +
+  annotate(
+    "rect",
+    xmin = 1300,
+    xmax = 2500,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'white'
+  ) +
+  annotate(
+    "text",
+    x = 600,
+    y = 30,
+    label = "VIS",
+    fontface = "bold",
+    size = 5
+  ) +
+  annotate(
+    "text",
+    x = 1000,
+    y = 30,
+    label = "NIR",
+    fontface = "bold",
+    size = 5
+  ) +
+  annotate(
+    "text",
+    x = 1900,
+    y = 30,
+    label = "SWIR",
+    fontface = "bold",
+    size = 5
+  ) +
+  geom_vline(
+    xintercept = bands4gg,
+    col = "black",
+    linetype = "twodash",
+    size = 1,
+    alpha = .5
+  ) +
   theme_set(theme_bw(base_size = 20))+
   theme(legend.position = c(.90, .88), legend.title = element_blank(), legend.background = element_blank())
+
+pspec
 
 p5 <- plot_list[[2]]
 p5 <- p5+
   theme(#axis.title.x=element_blank(),
     axis.text.x=element_blank(),
-    axis.ticks.x=element_blank())
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank())
 p6 <- plot_list[[3]]
 p6 <- p6+
   theme(#axis.title.x=element_blank(),
@@ -259,21 +344,20 @@ p8 <- plot_list[[5]]
 p8 <- p8+
   theme(#axis.title.x=element_blank(),
     axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank())+
-    labs(x = "LMMR")
+    axis.ticks.x=element_blank())+
+    labs(x = "LMMR", y="Disease Prob.")
 
 plot.res <- ggdraw() +
-  draw_plot(p5, x = 0, y = .5, width = .25, height = .5) +
-  draw_plot(p6, x = .25, y = .5, width = .25, height = .5) +
-  draw_plot(p7, x = .5, y = .5, width = .25, height = .5) +
-  draw_plot(p8, x = .75, y = .5, width = .25, height = .5) +
+  draw_plot(p8, x = 0, y = .5, width = .25, height = .5) +
+  draw_plot(p5, x = .25, y = .5, width = .25, height = .5) +
+  draw_plot(p6, x = .5, y = .5, width = .25, height = .5) +
+  draw_plot(p7, x = .75, y = .5, width = .25, height = .5) +
   draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
   draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 12,
                   x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
 
 ggsave(
-  "output/Results.pdf",
+  "output/20180103Results.png",
   plot = plot.res,
   width = 40,
   height = 20,
@@ -283,6 +367,42 @@ ggsave(
 
 # Calculate Accuracy Metrics ---------------------------------------------------
 
+    # A) Get AIC values from logit models
+
+VILMMRopt <- vegindex(spectra, LMMR2)
+VIPRI <- vegindex(spectra, 'PRI')
+VIMCARI <- vegindex(spectra, 'MCARI')
+VINBNDVI <- vegindex(spectra, NBNDVI)
+
+
+AICtab <- cbind(result_df, VILMMRopt)
+AICtab <- cbind(AICtab, VIPRI)
+AICtab <- cbind(AICtab, VIMCARI)
+AICtab <- cbind(AICtab, VINBNDVI)
+
+LMMR.logit <- glm(AICtab[,1]~AICtab$VILMMRopt, family=binomial(link=probit))
+LMMR.logit$aic
+
+PRI.logit <- glm(AICtab[,1]~AICtab$VIPRI, family=binomial(link=probit))
+PRI.logit$aic
+
+MCARI.logit <- glm(AICtab[,1]~AICtab$VIMCARI, family=binomial(link=probit))
+MCARI.logit$aic
+
+NBNDVI.logit <- glm(AICtab[,1]~AICtab$VINBNDVI, family=binomial(link=probit))
+NBNDVI.logit$aic
+
+aics <- vector()
+
+aics[1] <- LMMR.logit$aic
+aics[2] <- PRI.logit$aic
+aics[3] <- MCARI.logit$aic
+aics[4] <- NBNDVI.logit$aic
+
+DeltaAIC <- round(aics/aics[1], 3)
+  
+  
+    # B) Design accuracy assessment table
 
 result_df$Type <-
     as.numeric(result_df$Type == 'Untreated') # 1 = treated; 0 = untreated
@@ -293,7 +413,19 @@ myCMX <- cmx(myDat) #Select columns here to get confusion matrix
 
 acc <- presence.absence.accuracy(myDat)
 
-acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)] ### maybe round by 3?
+acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)] 
 
-saveRDS(acc_fin, 'data/Table1.rds')
+acc_fin[, c(2:6)] <- round(acc_fin[,c(2:6)], 3)
 
+acc_fin[c(2,3,4,5),] <- acc_fin[c(5,2,3,4),]
+
+acc_fin <- acc_fin[c(2:5),]
+acc_fin
+
+Table1 <- cbind(acc_fin,DeltaAIC)
+
+saveRDS(Table1, 'output/Table1.rds')
+
+write.csv(Table1, 'output/Table1.csv')
+
+?cmx
