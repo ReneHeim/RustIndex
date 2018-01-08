@@ -13,8 +13,7 @@
 ####
 
 
-# 1. Loading Packages and Functions------------------------------------------------
-
+# 1. Install and Load Packages --------------------------------------------------------
 
 install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
@@ -38,26 +37,15 @@ library(reshape2)
 library(caret)
 
 
-source('R/20171224_FUN_raw2speclibhsdar.R')
+# 2. Loading Functions ----------------------------------------------------------------
+
 source('R/20170601_FUN_DropCatVar.R')
-source('R/20171224_FUN_ModelSelect.R')
-source('R/2011224_FUN_LMMRindex.R')
-source('R/20171224_FUN_LMMRloop.R')
-source('R/20171224_FUN_index2prob.R')
 source('R/20170601_FUN_exportVSURF.R')
+source('R/20171224_FUN_raw2speclibhsdar.R')
+source('R/20171224_FUN_index2prob.R')
 source('R/20171224_FUN_prepggwide2long.R')
 
-#Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
-
-# 2. Set Project Structure --------------------------------------------------------
-
-dir.create('data', FALSE, FALSE)
-dir.create('R', FALSE, FALSE)
-dir.create('doc', FALSE, FALSE)
-dir.create('output', FALSE, FALSE)
-
-
-# 3. Loading and Preparing Data ---------------------------------------------------
+# 3. Loading and Preparing Data -------------------------------------------------------
 
 ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
@@ -65,16 +53,20 @@ levels(ori.data$Type) #Check levels of categorical response
 
 data.log <- DropClass(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
 
+Type <- data.log$Type
+
 data.log$Type <-
-    as.numeric(data.log$Type == 'Untreated') #Transform remaining factor levels into 1 and 0 
+  as.numeric(data.log$Type == 'Untreated') #Transform remaining factor levels into 1 and 0 
 
 data.log[names(data.log)[-1]] <-
-    log(data.log[names(data.log)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
+  log(data.log[names(data.log)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
 
 
-# 4. Selecting Subset of Relevant Wavebands ---------------------------------------
+# 4. Selecting Subset of Relevant Wavebands -------------------------------------------
 
-    # A) VSURF Feature Selection (Runs ~30 hours) ## really? not only 3 see line 84
+set.seed(20180108)
+
+# A) 10x VSURF Feature Selection (Runs ~30 hours)
 
 # feature.set <- list()
 # runs <- seq(1,10,1)
@@ -87,50 +79,37 @@ data.log[names(data.log)[-1]] <-
 # }
 # saveRDS(feature.set, 'output/features.rds')
 
-feature.set <- readRDS('output/features.rds') # B) Load features as A) runs a while
+feature.set <- readRDS('output/features.rds') # List conatining 10 feature selection objects
 
-    # C) VSURF outputs column indices (1,2..), therefore turn into waveband names (500, 505...)
+# C) VSURF outputs only important column numbers (1,2..), 
+#    therefore turn into waveband names (500, 505...)
 
-runs <- seq(1,10,1) #Create sequence depending on length of feature.set
-res <- list() #Create output object
+runs <- seq(1,10,1) # Create sequence depending on length of feature.set
+band.vectors <- list() # Create output object
 
 for(i in runs){
-  res[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data.log[, 2:202])
-  }
+  band.vectors[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data.log[, 2:202])
+} # export.VSURF turns list of column numbers into list of according wavebands
 
-VSURF.selection <- unlist(res) #Unlist list to create a vector containing all selected bands
+VSURF.selection <- unlist(band.vectors) #Unlist list to create a vector containing all selected bands
 VSURF.selection <- sort(unique(VSURF.selection)) #Only select unique bands from vector and sort
 
+# 5. Model Selection to find 4 best bands to explain seperation between healthy and treated-----------
 
-# 5. Model Selection ---------------------------------------------------------
+multi.model <- glmulti(y=names(data.log)[1],xr=paste0('X',VSURF.selection),data.log,maxsize=4,level = 1, family=binomial)
 
-model.1 <- GLM.featureselect(data.log, VSURF.selection)
+# 5.1 glmulti does not provide model coefficients, therefore add another logistic regression to
+#     find coefficients for the spectral index
 
-best.bands <-
-  row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)]
+model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data.log,family=binomial)
 
-df.bands <-
-  cbind('Type' = ori.data$Type, ori.data[best.bands]) #Select only best bands cols from df
+# 5.2 Build LMMR complex equation
 
-df.bands <- DropClass(df.bands, df.bands$Type, "Healthy")
+best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # Extract best bands
 
-index_vals <-
-  index4col(df.bands[, 2:5], model.1) # Function that generates LMMR values
+#P=(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4]))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4])))))
 
-result_df <-
-  cbind('Type' = df.bands$Type, index_vals) # Attach LMMR values to dataframe
-
-names(result_df)[2] <- c('LMMR') #Rename col name
-
-mod.out <- list()
-
-mod.out[['BestBands']] <- best.bands
-mod.out[['Coefficients']] <- coef(model.1)
-mod.out[['IndexDF']] <- result_df
-
-saveRDS(mod.out, 'output/modeloutput.rds') # Export for future use
-
-    # A) Do 95% confint for coefficient pairs overlap?
+# 5.3 Do 95% confint for coefficient pairs overlap?
 
 y = coef(model.1)
 x = seq_along(y)
@@ -147,9 +126,9 @@ abline(h=0, lty=3)
 arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 
 
-# 6. Build spectral library and compute indices ------------------------------
+# 6. Build spectral library and compute indices ------------------------------------------------------
 
-    # A) Build spectral library
+# A) Build spectral library
 
 tospectra <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
 
@@ -157,75 +136,104 @@ tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
+# B) Define spectral vegetation indices according to 'hsdar' pkg style
 
-    # B) Define spectral vegetation indices according to 'hsdar' pkg style
+LMMR.complex <- '(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195)))))'
+LMMR_complex <- vegindex(spectra, LMMR.complex)
+# LMMRcomplex values already are probabilities as the equation was built using a logistic regression
+# All other indices must be submitted to a logistic regression to convert their values to probabilities
 
-
-#ARI <-  '((R550)^−1) − ((R700)^−1)' #Anthocyanin Reflectance Index
-#RVSI <- '(((R712) + (R752))/2) − (R732)' #Red_Edge Vegetation Stress Index
 NBNDVI <- '(R850-R680)/(R850+R680)'
-#SIPI <- '(R800-R445)/(R800+R680)'
-LMMR2 <- '((R545/R555)^(5/3))*(R1505/R2195)'
+LMMR.simple <- '((R545/R555)^(5/3))*(R1505/R2195)'
 
-ind <- c("PRI", "MCARI", NBNDVI, LMMR2) # Add self-defined or hsdar pkg indices here (?vegindex)
+index <- c("PRI", "MCARI", NBNDVI, LMMR.simple) # Add self-defined or hsdar pkg indices here (?vegindex)
 
-    # C) Build df containing disease probabilities for each vegetation index
+# C) Compute spectral index values for all indices (except LMMR.complex, see 6. B)
 
-for (i in ind) {
-    result_df[[paste(i, 'prob', sep = "_")]] <-
-        Index2Prob(result_df, spectra, i)
-    
-} 
+index.list <- list()
 
-ind.c <- c('PRI', 'MCARI', 'NBNDVI', 'LMMRopt') # Choose suitable column names
+index.list[['PRI']] <- vegindex(spectra, index[1])
+index.list[['MCARI']] <- vegindex(spectra, index[2])
+index.list[['NBNDVI']] <- vegindex(spectra, index[3])
+index.list[['LMMR.simple']] <- vegindex(spectra, index[4])
 
-colnames(result_df)[3:length(result_df)] <- ind.c
+index.df <- do.call(cbind.data.frame, index.list)
 
-write_csv(result_df,'output/vegindex_df.csv')
+# D) Each column in 'index.df' must be passed through a logistic regression to yield probability values
 
-# 7. Visualize Results ------------------------------------------------------------
+index.prob.list <- list() # This list will contain all logistic regression models
+
+index.prob.list[['PRI.model']] <- glm(data.log[,1]~index.df$PRI, family=binomial(link=probit))
+index.prob.list[['MCARI.model']] <- glm(data.log[,1]~index.df$MCARI, family=binomial(link=probit))
+index.prob.list[['NBNDVI.model']] <- glm(data.log[,1]~index.df$NBNDVI, family=binomial(link=probit))
+index.prob.list[['LMMR.simple.model']] <- glm(data.log[,1]~index.df$LMMR.simple, family=binomial(link=probit))
+
+# E) Build a df containing LMMR.complex plus probability values stored under each model in index.prob.list
+
+result.df <- as.data.frame(Type)
+result.df <- cbind(result.df, LMMR_complex)
+result.df <- cbind(result.df, 'PRI'= index.prob.list$PRI.model$fitted.values)
+result.df <- cbind(result.df, 'MCARI'= index.prob.list$MCARI.model$fitted.values)
+result.df <- cbind(result.df, 'NBNDVI'= index.prob.list$NBNDVI.model$fitted.values)
+result.df <- cbind(result.df, 'LMMR.simple'=index.prob.list$LMMR.simple.model$fitted.values)
+
+# F) Is the simplified LMMR similar to the complex LMMR?
+
+# D) Explore the logistic regression model of the LMMR
+
+
+coefficients(index.prob.list$LMMR.simple.model) # Find in Equation 4 in article
+
+compare <- (index.prob.list$LMMR.simple.model$aic)-(model.1$aic) # Shows similarity of complex and simplified LMMR
+
+compare
+
+
+write_csv(result.df,'output/vegindex_df.csv') # This file contains all used indices converted into 
+# probability values
+
+# 7. Visualize Results ------------------------------------------------------------------------------
+
+# A) Create box plots/jitter plots to visually compare LMMR.complex, LMMR.simple, PRI, MCARI and NBNDVI
 
 plot_list <- list()
-indi <- names(result_df[, 2:length(result_df)])
+indi <- names(result.df[, 2:length(result.df)])
 
 for (i in indi) {
-    plot_list[[i]] <-
-        ggplot(result_df,
-               aes_string(result_df$Type, result_df[, i], colour = result_df$Type)) +
-        geom_jitter(aes(shape=Type),height = 0) +
-        geom_boxplot(colour = 'black',
-                     alpha = 0.5,
-                     outlier.alpha = 0) +
-        theme(
-            axis.text = element_text(size = 16),
-            axis.title = element_text(size = 16, face = "bold"),
-            legend.position = "none"
-        ) +
-        xlab(label = paste(i)) +
-        ylab(label = 'Index Value')+
-        ylim(0, 1)
+  plot_list[[i]] <-
+    ggplot(result.df,
+           aes_string(result.df$Type, result.df[, i], colour = result.df$Type)) +
+    geom_jitter(aes(shape=Type),height = 0) +
+    geom_boxplot(colour = 'black',
+                 alpha = 0.5,
+                 outlier.alpha = 0) +
+    theme(
+      axis.text = element_text(size = 16),
+      axis.title = element_text(size = 16, face = "bold"),
+      legend.position = "none"
+    ) +
+    xlab(label = paste(i)) +
+    ylab(label = 'Index Value')+
+    ylim(0, 1)
 }
 
 
-
 p1 <- plot_grid(
-    plot_list[[2]],
-    plot_list[[3]],
-    plot_list[[4]],
-    plot_list[[5]],
-    labels = c("a", 'b', 'c', 'd'),
-    ncol = 4,
-    nrow = 1
+  plot_list[[1]],
+  plot_list[[5]],
+  plot_list[[2]],
+  plot_list[[3]],
+  plot_list[[4]],
+  labels = c("a", 'b', 'c', 'd', 'e'),
+  ncol = 5,
+  nrow = 1
 )
 p1
 
 
-# Spectra plots
-
+# B) Plot spectra and show final most important wavebands
 
 spectra.gg <- prep.gg(tospectra) # Transforms wide to long for ggplot2 readibility
-
-# Subplot E (Spectra including spectral regions and best bands)
 
 bands4gg <-as.numeric(gsub('X', '', best.bands))
 
@@ -322,42 +330,59 @@ pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
 
 pspec
 
+# C) Get bar/jitter plots from 7A and modify to combine with 7B
+
 p5 <- plot_list[[2]]
 p5 <- p5+
   theme(#axis.title.x=element_blank(),
     axis.text.x=element_blank(),
     axis.ticks.x=element_blank(),
     axis.title.y=element_blank())
+
 p6 <- plot_list[[3]]
 p6 <- p6+
   theme(#axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank())
+    axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank())
+
 p7 <- plot_list[[4]]
 p7 <- p7+
   theme(#axis.title.x=element_blank(),
     axis.text.x=element_blank(),
     axis.ticks.x=element_blank(),
     axis.title.y=element_blank())
+
 p8 <- plot_list[[5]]
 p8 <- p8+
   theme(#axis.title.x=element_blank(),
     axis.text.x=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.title.y=element_blank())+
+  labs(x = "LMMR.s")
+
+p9 <- plot_list[[1]]
+p9 <- p9+
+  theme(#axis.title.x=element_blank(),
+    axis.text.x=element_blank(),
     axis.ticks.x=element_blank())+
-    labs(x = "LMMR", y="Disease Prob.")
+  labs(x = "LMMR.c", y="Disease Prob.")
+
+# D) Build Figure 2 (Figure 1 was designed outside of R using photographs and Inkscape)
 
 plot.res <- ggdraw() +
-  draw_plot(p8, x = 0, y = .5, width = .25, height = .5) +
-  draw_plot(p5, x = .25, y = .5, width = .25, height = .5) +
-  draw_plot(p6, x = .5, y = .5, width = .25, height = .5) +
-  draw_plot(p7, x = .75, y = .5, width = .25, height = .5) +
+  draw_plot(p9, x = 0, y = .5, width = .2, height = .5) +
+  draw_plot(p8, x = 0.2, y = .5, width = .2, height = .5) +
+  draw_plot(p5, x = .4, y = .5, width = .2, height = .5) +
+  draw_plot(p6, x = .6, y = .5, width = .2, height = .5) +
+  draw_plot(p7, x = .8, y = .5, width = .2, height = .5) +
   draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
-  draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 12,
-                  x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
+  draw_plot_label(label = c("A", "B", "C", "D", "E", "F"), size = 12,
+                  x = c(0, 0.2, 0.4, 0.6,0.8, 0), y = c(1, 1, 1, 1, 1, 0.5))
+plot.res
 
 ggsave(
-  "output/20180103Results.png",
+  "output/20180108Results.png",
   plot = plot.res,
   width = 40,
   height = 20,
@@ -365,51 +390,44 @@ ggsave(
   dpi = 400
 )
 
-# Calculate Accuracy Metrics ---------------------------------------------------
+# 8. Calculate Accuracy Metrics -------------------------------------------------------
 
-    # A) Get AIC values from logit models
+# A) Get AIC values from logit models
 
-VILMMRopt <- vegindex(spectra, LMMR2)
-VIPRI <- vegindex(spectra, 'PRI')
-VIMCARI <- vegindex(spectra, 'MCARI')
-VINBNDVI <- vegindex(spectra, NBNDVI)
+aics <- list()
+
+aics['LMMRcomplex'] <- model.1$aic
+aics['LMMRsimple'] <- index.prob.list$LMMR.simple.model$aic
+aics['PRI'] <- index.prob.list$PRI.model$aic
+aics['MCARI'] <- index.prob.list$MCARI.model$aic
+aics['NBNDVI'] <- index.prob.list$NBNDVI.model$aic
+
+aicvec <- unlist(aics)
+DeltaAIC <- round(aicvec-aicvec[1], 3)
 
 
-AICtab <- cbind(result_df, VILMMRopt)
-AICtab <- cbind(AICtab, VIPRI)
-AICtab <- cbind(AICtab, VIMCARI)
-AICtab <- cbind(AICtab, VINBNDVI)
+# B) Extract confusion matrices for Table 1
 
-LMMR.logit <- glm(AICtab[,1]~AICtab$VILMMRopt, family=binomial(link=probit))
-LMMR.logit$aic
+confmat.LMMRc<- cmx(myDat[,c(1,2,3)]) #Select columns here to get confusion matrix
+confmat.LMMRs<- cmx(myDat[,c(1,2,7)])
+confmat.PRI<- cmx(myDat[,c(1,2,4)])
+confmat.MCARI<- cmx(myDat[,c(1,2,5)])
+confmat.NBNDVI<- cmx(myDat[,c(1,2,6)])
 
-PRI.logit <- glm(AICtab[,1]~AICtab$VIPRI, family=binomial(link=probit))
-PRI.logit$aic
+write.csv(confmat.LMMRc, 'output/confmatLMMRc.csv', row.names = FALSE)
+write.csv(confmat.LMMRc, 'output/confmatLMMRs.csv', row.names = FALSE)
+write.csv(confmat.PRI, 'output/confmatPRI.csv', row.names = FALSE)
+write.csv(confmat.MCARI, 'output/confmatMCARI.csv', row.names = FALSE)
+write.csv(confmat.NBNDVI, 'output/confmatNBNDVI.csv', row.names = FALSE)
 
-MCARI.logit <- glm(AICtab[,1]~AICtab$VIMCARI, family=binomial(link=probit))
-MCARI.logit$aic
+# C) Design accuracy assessment for Table 2
 
-NBNDVI.logit <- glm(AICtab[,1]~AICtab$VINBNDVI, family=binomial(link=probit))
-NBNDVI.logit$aic
+result.temp <- result.df
 
-aics <- vector()
+result.temp$Type <- ifelse(result.temp$Type=="Untreated",1,0) # 1 = untreated; 0 = treated
 
-aics[1] <- LMMR.logit$aic
-aics[2] <- PRI.logit$aic
-aics[3] <- MCARI.logit$aic
-aics[4] <- NBNDVI.logit$aic
+myDat <- cbind(ID = seq(1, dim(result.temp)[1]), result.temp)
 
-DeltaAIC <- round(aics/aics[1], 3)
-  
-  
-    # B) Design accuracy assessment table
-
-result_df$Type <-
-    as.numeric(result_df$Type == 'Untreated') # 1 = treated; 0 = untreated
-
-myDat <- cbind(ID = seq(1, dim(result_df)[1]), result_df)
-
-myCMX <- cmx(myDat) #Select columns here to get confusion matrix
 
 acc <- presence.absence.accuracy(myDat)
 
@@ -417,15 +435,14 @@ acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)]
 
 acc_fin[, c(2:6)] <- round(acc_fin[,c(2:6)], 3)
 
-acc_fin[c(2,3,4,5),] <- acc_fin[c(5,2,3,4),]
+acc_fin[c(1,2,3,4,5),] <- acc_fin[c(1,5,3,4,2),]
 
-acc_fin <- acc_fin[c(2:5),]
-acc_fin
+Table2 <- cbind(acc_fin[,2:5],DeltaAIC)
 
-Table1 <- cbind(acc_fin,DeltaAIC)
+saveRDS(Table2, 'output/Table1.rds')
 
-saveRDS(Table1, 'output/Table1.rds')
+write.csv(Table2, 'output/Table1.csv')
 
-write.csv(Table1, 'output/Table1.csv')
 
-?cmx
+
+
