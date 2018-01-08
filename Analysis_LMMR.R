@@ -13,7 +13,7 @@
 ####
 
 
-# 1. Install and Load Packages --------------------------------------------------------
+# 1. Install and Load Packages ----------------------------------------------------------------------
 
 install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
@@ -37,7 +37,7 @@ library(reshape2)
 library(caret)
 
 
-# 2. Loading Functions ----------------------------------------------------------------
+# 2. Loading Functions and set project structure-----------------------------------------------------
 
 source('R/20170601_FUN_DropCatVar.R')
 source('R/20170601_FUN_exportVSURF.R')
@@ -45,7 +45,12 @@ source('R/20171224_FUN_raw2speclibhsdar.R')
 source('R/20171224_FUN_index2prob.R')
 source('R/20171224_FUN_prepggwide2long.R')
 
-# 3. Loading and Preparing Data -------------------------------------------------------
+-dir.create('data', FALSE, FALSE)
+-dir.create('R', FALSE, FALSE)
+-dir.create('doc', FALSE, FALSE)
+-dir.create('output', FALSE, FALSE)
+
+# 3. Loading and Preparing Data ---------------------------------------------------------------------
 
 ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
@@ -62,7 +67,7 @@ data.log[names(data.log)[-1]] <-
   log(data.log[names(data.log)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
 
 
-# 4. Selecting Subset of Relevant Wavebands -------------------------------------------
+# 4. Selecting Subset of Relevant Wavebands ---------------------------------------------------------
 
 set.seed(20180108)
 
