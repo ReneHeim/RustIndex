@@ -42,7 +42,6 @@ library(caret)
 source('R/20170601_FUN_DropCatVar.R')
 source('R/20170601_FUN_exportVSURF.R')
 source('R/20171224_FUN_raw2speclibhsdar.R')
-source('R/20171224_FUN_index2prob.R')
 source('R/20171224_FUN_prepggwide2long.R')
 
 -dir.create('data', FALSE, FALSE)
@@ -56,20 +55,20 @@ ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
 levels(ori.data$Type) #Check levels of categorical response 
 
-data.log <- DropClass(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
+data <- DropClass(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
 
-Type <- data.log$Type
+Type <- data$Type # Exract for later use
 
-data.log$Type <-
-  as.numeric(data.log$Type == 'Untreated') #Transform remaining factor levels into 1 and 0 
+data$Type <-
+  as.numeric(data$Type == 'Untreated') #Transform remaining factor levels into 1 and 0 
 
-data.log[names(data.log)[-1]] <-
-  log(data.log[names(data.log)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
+data[names(data)[-1]] <-
+  log(data[names(data)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
 
 
 # 4. Selecting Subset of Relevant Wavebands ---------------------------------------------------------
 
-set.seed(20180108)
+set.seed(20180111)
 
 # A) 10x VSURF Feature Selection (Runs ~30 hours)
 
@@ -93,7 +92,7 @@ runs <- seq(1,10,1) # Create sequence depending on length of feature.set
 band.vectors <- list() # Create output object
 
 for(i in runs){
-  band.vectors[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data.log[, 2:202])
+  band.vectors[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data[, 2:202])
 } # export.VSURF turns list of column numbers into list of according wavebands
 
 VSURF.selection <- unlist(band.vectors) #Unlist list to create a vector containing all selected bands
@@ -101,21 +100,30 @@ VSURF.selection <- sort(unique(VSURF.selection)) #Only select unique bands from 
 
 # 5. Model Selection to find 4 best bands to explain seperation between healthy and treated-----------
 
-multi.model <- glmulti(y=names(data.log)[1],xr=paste0('X',VSURF.selection),data.log,maxsize=4,level = 1, family=binomial)
+multi.model <- glmulti(y=names(data)[1],xr=paste0('X',VSURF.selection),data,maxsize=4,level = 1, family=binomial)
 
 # 5.1 glmulti does not provide model coefficients, therefore add another logistic regression to
 #     find coefficients for the spectral index
 
-model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data.log,family=binomial)
+model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data,family=binomial)
+
+saveRDS(model.1, 'output/LMMRcomplexMODEL.RDS')
+model.1 <- readRDS(file = 'output/LMMRcomplexMODEL.RDS')
 
 # 5.2 Build LMMR complex equation
 
 coefficients(model.1)
 best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # Extract best bands
+coefficients(model.1)
 
-#P=(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4]))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4])))))
+LMMR.complex <- '(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195)))))'
 
-# 5.3 Do 95% confint for coefficient pairs overlap?
+# LMMRcomplex values already are probabilities as the equation was built using a logistic regression
+# All other indices must be submitted to a logistic regression to convert their values to probabilities
+
+# 5.3 Do absolute 95% confint for coefficient pairs overlap? (Requirement to build ratio index)
+
+confint(model.1)
 
 y = coef(model.1)
 x = seq_along(y)
@@ -132,7 +140,7 @@ abline(h=0, lty=3)
 arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 
 
-# 6. Build spectral library and compute indices ------------------------------------------------------
+# 6. Compare simplified LMMR and other common indices-----------------------------------------
 
 # A) Build spectral library
 
@@ -142,46 +150,66 @@ tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
-# B) Define spectral vegetation indices according to 'hsdar' pkg style
-
-LMMR.complex <- '(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195)))))'
-LMMR_complex <- vegindex(spectra, LMMR.complex)
-# LMMRcomplex values already are probabilities as the equation was built using a logistic regression
-# All other indices must be submitted to a logistic regression to convert their values to probabilities
+# B) Define spectral vegetation indices and LMMR 
 
 NBNDVI <- '(R850-R680)/(R850+R680)'
-LMMR.simple <- '((R545/R555)^(5/3))*(R1505/R2195)'
+LMMR <- '((R545/R555)^(5/3))*(R1505/R2195)'
 
-index <- c("PRI", "MCARI", NBNDVI, LMMR.simple) # Add self-defined or hsdar pkg indices here (?vegindex)
+index <- c("PRI", "MCARI", NBNDVI, LMMR) # Add self-defined or hsdar pkg indices here (?vegindex)
 
-# C) Compute spectral index values for all indices (except LMMR.complex, see 6. B)
+# C) Compute spectral index values for all indices
 
 index.list <- list()
 
 index.list[['PRI']] <- vegindex(spectra, index[1])
 index.list[['MCARI']] <- vegindex(spectra, index[2])
 index.list[['NBNDVI']] <- vegindex(spectra, index[3])
-index.list[['LMMR.simple']] <- vegindex(spectra, index[4])
-
+index.list[['LMMR']] <- log(vegindex(spectra, index[4])) # Needs to be transformed 
+                                                                # to the log scale as it was
+                                                                # developed on that scale.
 index.df <- do.call(cbind.data.frame, index.list)
+index.df$Type <- Type
 
-# D) Each column in 'index.df' must be passed through a logistic regression to yield probability values
+# D) Logistic regression on each index outcome (index.df) using caret pkg
 
-index.prob.list <- list() # This list will contain all logistic regression models
+inTrain <- createDataPartition(y = index.df$Type, p = .75, list = FALSE)
+Train.75 <- index.df[inTrain,]
+Test.25 <- index.df[-inTrain,]
 
-index.prob.list[['PRI.model']] <- glm(data.log[,1]~index.df$PRI, family=binomial(link=probit))
-index.prob.list[['MCARI.model']] <- glm(data.log[,1]~index.df$MCARI, family=binomial(link=probit))
-index.prob.list[['NBNDVI.model']] <- glm(data.log[,1]~index.df$NBNDVI, family=binomial(link=probit))
-index.prob.list[['LMMR.simple.model']] <- glm(data.log[,1]~index.df$LMMR.simple, family=binomial(link=probit))
+ctrl <- trainControl(method = "repeatedcv",repeats = 10, classProbs = TRUE,summaryFunction = twoClassSummary)
 
-# E) Build a df containing LMMR.complex plus probability values stored under each model in index.prob.list
+# PRI
+PRI.model <- train(Type ~ PRI, data = Train.75, method = "glm", trControl = ctrl, metric = c("Kappa"))
+PRI.model
+PRI.pred <- predict(PRI.model, newdata = Test.25)
+confmat.PRI <- confusionMatrix(data = PRI.pred, Test.25$Type)
+
+# MCARI
+MCARI.model <- train(Type ~ MCARI, data = Train.75, method = "glm", trControl = ctrl, metric = c("Kappa"))
+MCARI.model
+MCARI.pred <- predict(MCARI.model, newdata = Test.25)
+confmat.MCARI <- confusionMatrix(data = MCARI.pred, Test.25$Type)
+
+# NBNDVI
+NBNDVI.model <- train(Type ~ NBNDVI, data = Train.75, method = "glm", trControl = ctrl, metric = c("Kappa"))
+NBNDVI.model
+NBNDVI.pred <- predict(NBNDVI.model, newdata = Test.25)
+confmat.NBNDVI <- confusionMatrix(data = NBNDVI.pred, Test.25$Type)
+
+# LMMR
+LMMR.model <- train(Type ~ LMMR, data = Train.75, method = "glm", trControl = ctrl, metric = c("Kappa"))
+LMMR.model
+LMMR.pred <- predict(LMMR.model, newdata = Test.25)
+confmat.LMMR <- confusionMatrix(data = LMMR.pred, Test.25$Type)
+
+confmat.LMMR$overall[2]
 
 result.df <- as.data.frame(Type)
-result.df <- cbind(result.df, LMMR_complex)
+result.df <- LMMR.pred
 result.df <- cbind(result.df, 'PRI'= index.prob.list$PRI.model$fitted.values)
 result.df <- cbind(result.df, 'MCARI'= index.prob.list$MCARI.model$fitted.values)
 result.df <- cbind(result.df, 'NBNDVI'= index.prob.list$NBNDVI.model$fitted.values)
-result.df <- cbind(result.df, 'LMMR.simple'=index.prob.list$LMMR.simple.model$fitted.values)
+result.df$LMMR.simple <- index.df$LMMR.simple
 
 # F) Is the simplified LMMR similar to the complex LMMR?
 
@@ -193,7 +221,6 @@ coefficients(index.prob.list$LMMR.simple.model) # Find in Equation 4 in article
 compare <- (index.prob.list$LMMR.simple.model$aic)-(model.1$aic) # Shows similarity of complex and simplified LMMR
 
 compare
-
 
 write_csv(result.df,'output/vegindex_df.csv') # This file contains all used indices converted into 
 # probability values
