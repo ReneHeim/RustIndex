@@ -15,9 +15,9 @@
 
 # 1. Install and Load Packages ----------------------------------------------------------------------
 
-install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
-                   "PresenceAbsence", "prospectr", "rJava", "tidyverse",
-                   "VSURF", "reshape2", "caret"))
+# install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
+#                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
+#                    "VSURF", "reshape2", "caret"))
 
 #Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151') #Set path to Java dir for rJava
 
@@ -110,6 +110,7 @@ model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data.log,family=binomi
 
 # 5.2 Build LMMR complex equation
 
+coefficients(model.1)
 best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # Extract best bands
 
 #P=(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4]))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(best.bands[1]))+(coef(model.1)[3]*log(best.bands[2]))+(coef(model.1)[4]*log(best.bands[3]))+(coef(model.1)[5]*log(best.bands[4])))))
