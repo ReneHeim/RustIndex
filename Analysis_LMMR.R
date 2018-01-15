@@ -15,7 +15,7 @@
 
 # 1. Install and Load Packages ----------------------------------------------------------------------
 
-# install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
+# install.packages(c("devtools","cowplot", "gdata", "glmulti", "hsdar", "plyr",
 #                    "PresenceAbsence", "prospectr", "rJava", "tidyverse",
 #                    "VSURF", "reshape2", "caret"))
 
@@ -35,6 +35,10 @@ library(tidyverse)
 library(VSURF)
 library(reshape2)
 library(caret)
+library(devtools)
+
+devtools::install_github("sachsmc/plotROC")
+library(plotROC)
 
 
 # 2. Loading Functions and set project structure-----------------------------------------------------
@@ -44,10 +48,9 @@ source('R/20170601_FUN_exportVSURF.R')
 source('R/20171224_FUN_raw2speclibhsdar.R')
 source('R/20171224_FUN_prepggwide2long.R')
 
--dir.create('data', FALSE, FALSE)
--dir.create('R', FALSE, FALSE)
--dir.create('doc', FALSE, FALSE)
--dir.create('output', FALSE, FALSE)
+-dir.create('data', FALSE, FALSE) # Contains original data only (Do not modify!)
+-dir.create('R', FALSE, FALSE) # Contains functions
+-dir.create('output', FALSE, FALSE) # Code generated output
 
 # 3. Loading and Preparing Data ---------------------------------------------------------------------
 
@@ -107,19 +110,18 @@ multi.model <- glmulti(y=names(data)[1],xr=paste0('X',VSURF.selection),data,maxs
 
 model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data,family=binomial)
 
-saveRDS(model.1, 'output/LMMRcomplexMODEL.RDS')
-model.1 <- readRDS(file = 'output/LMMRcomplexMODEL.RDS')
+saveRDS(model.1, 'output/LMMRmodel.RDS')
+model.1 <- readRDS(file = 'output/LMMRmodel.RDS')
 
 # 5.2 Build LMMR complex equation
 
 coefficients(model.1)
 best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # Extract best bands
-coefficients(model.1)
 
-LMMR.complex <- '(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195))))/(1+(exp(coef(model.1)[1]+(coef(model.1)[2]*log(R545))+(coef(model.1)[3]*log(R555))+(coef(model.1)[4]*log(R1505))+(coef(model.1)[5]*log(R2195)))))'
 
-# LMMRcomplex values already are probabilities as the equation was built using a logistic regression
-# All other indices must be submitted to a logistic regression to convert their values to probabilities
+LMMR.model.eq <- 'log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] + 45.993 log[R1505] - 46.831 log[R2195]'
+
+# LMMR model is the foundation for the simplified LMMR index (see article)
 
 # 5.3 Do absolute 95% confint for coefficient pairs overlap? (Requirement to build ratio index)
 
@@ -179,9 +181,11 @@ Test.25 <- index.df[-inTrain,]
 ctrl <- trainControl(method = "repeatedcv",repeats = 10, classProbs = TRUE,summaryFunction = twoClassSummary)
 
 # PRI
-PRI.model <- train(Type ~ PRI, data = Train.75, method = "glm", trControl = ctrl, metric = c("Kappa"))
-PRI.model
+PRI.model <- train(Type ~ PRI, data = Train.75, method = "glm", trControl = ctrl, metric = 'Kappa')
+summary(PRI.model)# estimates
 PRI.pred <- predict(PRI.model, newdata = Test.25)
+summary(PRI.pred)
+
 confmat.PRI <- confusionMatrix(data = PRI.pred, Test.25$Type)
 
 # MCARI
@@ -203,65 +207,45 @@ LMMR.pred <- predict(LMMR.model, newdata = Test.25)
 confmat.LMMR <- confusionMatrix(data = LMMR.pred, Test.25$Type)
 
 confmat.LMMR$overall[2]
+# E) Create Figure 1 - Training data/ Model evaluation (plotROC pkg)
 
-result.df <- as.data.frame(Type)
-result.df <- LMMR.pred
-result.df <- cbind(result.df, 'PRI'= index.prob.list$PRI.model$fitted.values)
-result.df <- cbind(result.df, 'MCARI'= index.prob.list$MCARI.model$fitted.values)
-result.df <- cbind(result.df, 'NBNDVI'= index.prob.list$NBNDVI.model$fitted.values)
-result.df$LMMR.simple <- index.df$LMMR.simple
+long.Train75 <- melt_roc(Train.75, "Type", c("PRI", "MCARI", "NBNDVI", "LMMR"))
+names(long.Train75) <- c('Type', 'Value', 'Index')
 
-# F) Is the simplified LMMR similar to the complex LMMR?
-
-# D) Explore the logistic regression model of the LMMR
+ggplot(long.Train75, aes(d = Type, m = Value, color = Index)) + 
+  geom_roc(n.cuts = 50, labels = FALSE, aes(shape=Index)) + 
+  style_roc(xlab = "1 - Specificity", ylab="Sensitivity")
 
 
-coefficients(index.prob.list$LMMR.simple.model) # Find in Equation 4 in article
+# F) Create Table 1 - Test data accuracy metrics
 
-compare <- (index.prob.list$LMMR.simple.model$aic)-(model.1$aic) # Shows similarity of complex and simplified LMMR
+OA <- round(c('PRI'= confmat.PRI$overall[1], 
+        'MCARI'= confmat.MCARI$overall[1], 
+        'NBNDVI'= confmat.NBNDVI$overall[1],
+        'LMMR'= confmat.LMMR$overall[1]),3)*100
 
-compare
+Kappa <- round(c('PRI'= confmat.PRI$overall[2], 
+        'MCARI'= confmat.MCARI$overall[2], 
+        'NBNDVI'= confmat.NBNDVI$overall[2],
+        'LMMR'= confmat.LMMR$overall[2]), 3)*100
 
-write_csv(result.df,'output/vegindex_df.csv') # This file contains all used indices converted into 
-# probability values
+Sensitivity <- round(c('PRI'= confmat.PRI$byClass[1], 
+        'MCARI'= confmat.MCARI$byClass[1], 
+        'NBNDVI'= confmat.NBNDVI$byClass[1],
+        'LMMR'= confmat.LMMR$byClass[1]), 3)*100
 
+Specificity <- round(c('PRI'= confmat.PRI$byClass[2], 
+                 'MCARI'= confmat.MCARI$byClass[2], 
+                 'NBNDVI'= confmat.NBNDVI$byClass[2],
+                 'LMMR'= confmat.LMMR$byClass[2]), 3)*100
+
+testresult.df <- as.data.frame(cbind(OA, Kappa, Sensitivity, Specificity))
+
+names(testresult.df) <- c('OA[%]', 'Kappa[%]', 'Sensitivity[%]', 'Specificity[%]')
+row.names(testresult.df) <- c('PRI', 'MCARI', 'NBNDVI', 'LMMR')
 # 7. Visualize Results ------------------------------------------------------------------------------
 
-# A) Create box plots/jitter plots to visually compare LMMR.complex, LMMR.simple, PRI, MCARI and NBNDVI
 
-plot_list <- list()
-indi <- names(result.df[, 2:length(result.df)])
-
-for (i in indi) {
-  plot_list[[i]] <-
-    ggplot(result.df,
-           aes_string(result.df$Type, result.df[, i], colour = result.df$Type)) +
-    geom_jitter(aes(shape=Type),height = 0) +
-    geom_boxplot(colour = 'black',
-                 alpha = 0.5,
-                 outlier.alpha = 0) +
-    theme(
-      axis.text = element_text(size = 16),
-      axis.title = element_text(size = 16, face = "bold"),
-      legend.position = "none"
-    ) +
-    xlab(label = paste(i)) +
-    ylab(label = 'Index Value')+
-    ylim(0, 1)
-}
-
-
-p1 <- plot_grid(
-  plot_list[[1]],
-  plot_list[[5]],
-  plot_list[[2]],
-  plot_list[[3]],
-  plot_list[[4]],
-  labels = c("a", 'b', 'c', 'd', 'e'),
-  ncol = 5,
-  nrow = 1
-)
-p1
 
 
 # B) Plot spectra and show final most important wavebands
@@ -363,43 +347,7 @@ pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
 
 pspec
 
-# C) Get bar/jitter plots from 7A and modify to combine with 7B
-
-p5 <- plot_list[[2]]
-p5 <- p5+
-  theme(#axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank())
-
-p6 <- plot_list[[3]]
-p6 <- p6+
-  theme(#axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank())
-
-p7 <- plot_list[[4]]
-p7 <- p7+
-  theme(#axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank())
-
-p8 <- plot_list[[5]]
-p8 <- p8+
-  theme(#axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.title.y=element_blank())+
-  labs(x = "LMMR.s")
-
-p9 <- plot_list[[1]]
-p9 <- p9+
-  theme(#axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank())+
-  labs(x = "LMMR.c", y="Disease Prob.")
+# C) Build Zoomed version
 
 # D) Build Figure 2 (Figure 1 was designed outside of R using photographs and Inkscape)
 
@@ -422,60 +370,6 @@ ggsave(
   units = "cm",
   dpi = 400
 )
-
-# 8. Calculate Accuracy Metrics -------------------------------------------------------
-
-# A) Get AIC values from logit models
-
-aics <- list()
-
-aics['LMMRcomplex'] <- model.1$aic
-aics['LMMRsimple'] <- index.prob.list$LMMR.simple.model$aic
-aics['PRI'] <- index.prob.list$PRI.model$aic
-aics['MCARI'] <- index.prob.list$MCARI.model$aic
-aics['NBNDVI'] <- index.prob.list$NBNDVI.model$aic
-
-aicvec <- unlist(aics)
-DeltaAIC <- round(aicvec-aicvec[1], 3)
-
-
-# B) Extract confusion matrices for Table 1
-
-confmat.LMMRc<- cmx(myDat[,c(1,2,3)]) #Select columns here to get confusion matrix
-confmat.LMMRs<- cmx(myDat[,c(1,2,7)])
-confmat.PRI<- cmx(myDat[,c(1,2,4)])
-confmat.MCARI<- cmx(myDat[,c(1,2,5)])
-confmat.NBNDVI<- cmx(myDat[,c(1,2,6)])
-
-write.csv(confmat.LMMRc, 'output/confmatLMMRc.csv', row.names = FALSE)
-write.csv(confmat.LMMRc, 'output/confmatLMMRs.csv', row.names = FALSE)
-write.csv(confmat.PRI, 'output/confmatPRI.csv', row.names = FALSE)
-write.csv(confmat.MCARI, 'output/confmatMCARI.csv', row.names = FALSE)
-write.csv(confmat.NBNDVI, 'output/confmatNBNDVI.csv', row.names = FALSE)
-
-# C) Design accuracy assessment for Table 2
-
-result.temp <- result.df
-
-result.temp$Type <- ifelse(result.temp$Type=="Untreated",1,0) # 1 = untreated; 0 = treated
-
-myDat <- cbind(ID = seq(1, dim(result.temp)[1]), result.temp)
-
-
-acc <- presence.absence.accuracy(myDat)
-
-acc_fin <- acc[, c(1, 3, 4, 5, 6, 7)] 
-
-acc_fin[, c(2:6)] <- round(acc_fin[,c(2:6)], 3)
-
-acc_fin[c(1,2,3,4,5),] <- acc_fin[c(1,5,3,4,2),]
-
-Table2 <- cbind(acc_fin[,2:5],DeltaAIC)
-
-saveRDS(Table2, 'output/Table1.rds')
-
-write.csv(Table2, 'output/Table1.csv')
-
 
 
 
