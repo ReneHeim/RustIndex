@@ -1,15 +1,24 @@
 ####
-# This code is generating a specific spectral disease index for the pathosystem
-# Austropuccinia psidii and Backhousia citriodora. It utilizes a 
-# spectral dataset containing following columns:
+# This code is generating the LMMR index (LemonMyrtle-MyrtleRust), a spectral disease index for the 
+# pathosystem Austropuccinia psidii and Backhousia citriodora. It utilizes a spectral dataset 
+# containing following columns:
 #
-# Type= Categorical variables referring to spectral class to be classified.
-# Wavelength: Contains class IDs -> Healthy = Australian Botanical Garden Mount 
-# Annan, Treated = Fungicide treated plants plantation, Untreated = Untreated 
-# plants plantation and 350,351,....,2500: Each column contains values of 
-# spectral reflectance at the specified wavelength in [%].
+# Type: Categorical variables referring to spectral classes (Healthy, Treated and Untreated). Data was
+# already cleaned and manipulated in Heim et al. (2018a).
 #
-# The full manuscript was published in: ...
+# X505-X2500: Spectral reflectance [%]at a specific waveband.
+#
+# Please refer to Heim et al. (2018b) for more information.
+#
+# Heim, R.H.J., Wright, I.J., Chang, H.-C., Carnegie, A.J., Pegg, G.S., Lancaster, E.K., Falster, D.S.,
+# Oldeland, J., 2018a. Detecting myrtle rust ( Austropuccinia psidii ) on lemon myrtle trees using 
+# spectral signatures and machine learning. Plant Pathol. https://doi.org/10.1111/ppa.12830
+#
+# Heim, R.H.J., Wright, I.J., Geedicke, I., Falster, D.S., Allen, A., Oldeland, J., 2018b.
+# ...
+#
+# The following code is structured according to the Method section (Fig. 2 A and B) in 
+# Heim et al. (2018b)
 ####
 
 
@@ -49,7 +58,11 @@ dir.create('data', FALSE, FALSE) # Contains original data only (Do not modify!)
 dir.create('R', FALSE, FALSE) # Contains functions
 dir.create('output', FALSE, FALSE) # Code generated output
 
-# 3. Loading and Preparing Data ---------------------------------------------------------------------
+############################################################################################
+# A SECTION - Raw data to linear model
+############################################################################################
+
+# A 3. Loading and Preparing Data ---------------------------------------------------------------------
 
 ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
@@ -66,11 +79,11 @@ data[names(data)[-1]] <-
   log(data[names(data)[-1]]) #Logs frequencies (R's log() computes natural logarithm)
 
 
-# 4. Selecting Subset of Relevant Wavebands ---------------------------------------------------------
+# A 4. Feature Selection (202 to 12 bands) -------------------------------------------------
 
 #set.seed(20180111)
 
-# A) 10x VSURF Feature Selection (Runs ~30 hours)
+# A) Selection was repeated 10x to account for random selection encounters (~ 30h runtime)
 
 # feature.set <- list()
 # runs <- seq(1,10,1)
@@ -81,14 +94,14 @@ data[names(data)[-1]] <-
 #                mtry = 50) #Takes ~3h, therefore saved/loaded as .rds
 #   
 # }
-# saveRDS(feature.set, 'output/features.rds')
+# saveRDS(feature.set, 'data/features.rds')
 
-feature.set <- readRDS('output/features.rds') # List conatining 10 feature selection objects
+feature.set <- readRDS('data/features.rds') # Reload stored feature selection object
 
 # C) VSURF outputs only important column numbers (1,2..), 
 #    therefore turn into waveband names (500, 505...)
 
-runs <- seq(1,10,1) # Create sequence depending on length of feature.set
+runs <- seq(1,length(feature.set),1) # Create sequence depending on length of feature.set
 band.vectors <- list() # Create output object
 
 for(i in runs){
@@ -98,7 +111,7 @@ for(i in runs){
 VSURF.selection <- unlist(band.vectors) #Unlist list to create a vector containing all selected bands
 VSURF.selection <- sort(unique(VSURF.selection)) #Only select unique bands from vector and sort
 
-# 5. Model Selection to find 4 best bands to explain seperation between healthy and treated-----------
+# A5. Model Selection to find 4 best bands to explain seperation between healthy and treated-----------
 set.seed(20180117)
 multi.model <- glmulti(y=names(data)[1],xr=paste0('X',VSURF.selection),data,maxsize=4,level = 1, family=binomial)
 
@@ -115,12 +128,15 @@ model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data,family=binomial)
 coefficients(model.1)
 best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # Extract best bands
 
-
 LMMR.model.eq <- 'log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] + 45.993 log[R1505] - 46.831 log[R2195]'
 
-# LMMR model is the foundation for the simplified LMMR index (see article)
+# Based on the LMMR model we designed the LMMR index through mathematical simplification.
+# We initially log transformed the spectral reflectance to apply Eq. 2 and 3 
+# (Heim et al., 2018b). Additionally, to summarize the model coefficients and yield
+# 5/3 as a simplification, the absolute 95% confidence intervals for coefficient pairs 
+# should overlap as this indicates products of approximately equal magnitudes.
 
-# 5.3 Do absolute 95% confint for coefficient pairs overlap? (Requirement to build ratio index)
+# 5.3 Plot confidence intervals
 
 confint(model.1)
 
@@ -138,8 +154,13 @@ axis(1, at=x, labels=names(y), tick=FALSE)
 abline(h=0, lty=3)
 arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 
+############################################################################################
+# B SECTION - Linear Model to classification report
+############################################################################################
 
-# 6. Compare simplified LMMR and other common indices-----------------------------------------
+# Please refer to the according  article for the required steps yielding the LMMR.
+
+# B 6. Compare simplified LMMR and other common indices-----------------------------------------
 
 # A) Build spectral library
 
@@ -167,9 +188,9 @@ index.list[['LMMR']] <- log(vegindex(spectra, index[4])) # Needs to be transform
                                                                 # to the log scale as it was
                                                                 # developed on that scale.
 index.df <- do.call(cbind.data.frame, index.list)
-index.df$Type <- Type
+index.df$Type <- Type # index.df is the new df for the classification
 
-# D) Logistic regression on each index outcome (index.df) using caret pkg
+# D) Logistic regression (classification) on each index outcome (index.df) using caret pkg
 
 inTrain <- createDataPartition(y = index.df$Type, p = .75, list = FALSE)
 Train.75 <- index.df[inTrain,]
@@ -242,36 +263,6 @@ train.res.df$NBNDVIval <- NBNDVIvalues
 train.res.df$LMMRval <- LMMRvalues
 
 names(train.res.df) <- c('Type', 'PRI', 'MCARI', 'NBNDVI', 'LMMR')
-
-
-# F) Create suppl. Table...Table 1 based on test data confusion matrices (sinked objects)
-
-OA <- round(c('PRI'= confmat.PRI$overall[1], 
-        'MCARI'= confmat.MCARI$overall[1], 
-        'NBNDVI'= confmat.NBNDVI$overall[1],
-        'LMMR'= confmat.LMMR$overall[1]),3)*100
-
-Kappa <- round(c('PRI'= confmat.PRI$overall[2], 
-        'MCARI'= confmat.MCARI$overall[2], 
-        'NBNDVI'= confmat.NBNDVI$overall[2],
-        'LMMR'= confmat.LMMR$overall[2]), 3)*100
-
-Sensitivity <- round(c('PRI'= confmat.PRI$byClass[1], 
-        'MCARI'= confmat.MCARI$byClass[1], 
-        'NBNDVI'= confmat.NBNDVI$byClass[1],
-        'LMMR'= confmat.LMMR$byClass[1]), 3)*100
-
-Specificity <- round(c('PRI'= confmat.PRI$byClass[2], 
-                 'MCARI'= confmat.MCARI$byClass[2], 
-                 'NBNDVI'= confmat.NBNDVI$byClass[2],
-                 'LMMR'= confmat.LMMR$byClass[2]), 3)*100
-
-TableSupp <- as.data.frame(cbind(OA, Kappa, Sensitivity, Specificity))
-
-names(TableSupp) <- c('OA[%]', 'Kappa[%]', 'Sensitivity[%]', 'Specificity[%]')
-row.names(TableSupp) <- c('PRI', 'MCARI', 'NBNDVI', 'LMMR')
-
-write.csv(Table1, 'output/Table1.testaccumetrics.csv')
 
 # 7. Visualize Results ------------------------------------------------------------------------------
 indi <- names(train.res.df[, 2:length(train.res.df)])
