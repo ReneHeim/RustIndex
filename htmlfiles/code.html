@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+
+<title></title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 60px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+
+.section h2 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h3 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h4 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h5 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h6 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = false;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">LMMR Index</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">
+    <span class="fa fa-home"></span>
+     
+    Summary
+  </a>
+</li>
+<li>
+  <a href="data.html">
+    <span class="fa fa-table"></span>
+     
+    Data
+  </a>
+</li>
+<li>
+  <a href="code.html">
+    <span class="fa fa-file-code-o"></span>
+     
+    Code
+  </a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+
+</div>
+
+
+<p>The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new spectral disease index for the pathosystem <em>Austropuccinia psidii</em> and <em>Backhousia citriodora</em>. It utilizes a spectral dataset that was collected and cleaned in a previous study and is structured as follows:</p>
+<ul>
+<li><p>Column 1: <strong>Type</strong> is a categorical variables referring to the spectral classes (“Healthy”, “Treated” and “Untreated”).</p></li>
+<li><p>Column 2 and follwoing: <strong>X505-X2500</strong> are the wavebands along the electromagnetic spectrum and have been recorded, using a field spectrometer, in spectral reflectance [%].</p></li>
+</ul>
+<p>Please refer to our previous article (Heim et al., 2018a) for more information:</p>
+<p>Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust (Austropuccinia psidii) on lemon myrtle trees using spectral signatures and machine learning. Plant Pathol, 67: 1114-1121. <a href="https://doi:10.1111/ppa.12830">doi:10.1111/ppa.12830</a></p>
+<p>The following code is structured according to the Method section in our current artice (Heim et al., 2018b):</p>
+<div class="figure">
+<img src="workflow.png" alt="Figure 1: Workflow as described in the article." width="400" />
+<p class="caption">Figure 1: Workflow as described in the article.</p>
+</div>
+<div id="setup-coding-environment" class="section level1">
+<h1>Setup coding environment</h1>
+<div id="install-and-load-packages" class="section level2">
+<h2>Install and load packages</h2>
+<p>Please run the following code to install required R packages</p>
+<pre class="r"><code>install.packages(c(&quot;cowplot&quot;, &quot;gdata&quot;, &quot;glmulti&quot;, &quot;hsdar&quot;, &quot;plyr&quot;,
+                   &quot;PresenceAbsence&quot;, &quot;prospectr&quot;, &quot;rJava&quot;, &quot;tidyverse&quot;,
+                   &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;))</code></pre>
+<p><strong>Note:</strong> For the package <em>rJava</em> it is necessary to set the path of the directory where Java is installed. Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir. For help pls follow this <a href="https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r">LINK</a></p>
+<p>For my machine I had to run:</p>
+<pre class="r"><code>Sys.setenv(JAVA_HOME=&#39;C:\\Program Files\\Java\\jre1.8.0_151&#39;)</code></pre>
+<p>Now we load the installed packages:</p>
+<pre class="r"><code>library(cowplot) #modify and save ggplot2 output
+library(gdata) #for DropClass function
+library(roxygen2) #to read function documentation
+library(ggplot2)
+library(glmulti)
+library(hsdar)
+library(plyr)
+library(PresenceAbsence)
+library(prospectr)
+library(rJava)
+library(dplyr)
+library(VSURF)
+library(reshape2)
+library(caret) #classfication and regression 
+library(devtools)</code></pre>
+<p>Also the necessary functions:</p>
+<pre class="r"><code>source(&quot;R/FUN_drop_cat_var.R&quot;)
+source(&quot;R/FUN_exportVSURF.R&quot;)
+source(&quot;R/FUN_raw2speclibhsdar.R&quot;)
+source(&quot;R/FUN_prepggwide2long.R&quot;)</code></pre>
+<p>And create a directory for the analysis output:</p>
+<pre class="r"><code>dir.create(&quot;output&quot;, FALSE, FALSE)</code></pre>
+</div>
+</div>
+<div id="a---from-raw-data-to-lmmr" class="section level1">
+<h1>A - From raw data to LMMR</h1>
+<div id="loading-and-preparing-data" class="section level2">
+<h2>Loading and preparing data</h2>
+<p>The following chunk of code is loading the cleaned spectral data (1), is then checking how many factor levels are stored in the <em>Type</em> column (2) and also dropping the level <Healthy> (3). The column <em>Type</em> is assigned to a single object for later use (4). Then, the remaining factor levels are converted (5) into a binary (1=Untreated and 0=Treated) to be readable by a logistic regression function. And finally, all reflectance values are log-transformed (6) to be able to design a ratio index in subsequent steps (<strong>Note:</strong> log() is ln).</p>
+<pre class="r"><code>ori.data &lt;- read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;) #1
+
+levels(ori.data$Type) #2
+
+data &lt;- DropClass(ori.data, ori.data$Type, &quot;Healthy&quot;) #3
+
+Type &lt;- data$Type #4
+
+data$Type &lt;- ifelse(data$Type==&#39;Untreated&#39;,1,0) #5
+
+data[names(data)[-1]] &lt;- log(data[names(data)[-1]]) #6</code></pre>
+</div>
+<div id="feature-selection-202-to-27-bands" class="section level2">
+<h2>Feature selection (202 to 27 bands)</h2>
+<p>The <em>VSURF</em> package is used to conduct a pre-selection of important variables. This pre-selection was done as it reduced the total runtime of the analysis by avoising a direct model selection procedure which would be more time consuming. The <em>VSURF</em> selection was repeated 10 times to account for random selection encounters (~ 30h runtime).</p>
+<pre class="r"><code>set.seed(20180111)
+
+feature.set &lt;- list() #1
+runs &lt;- seq(1,10,1) #2
+for(i in runs){
+
+feature.set[[i]] &lt;-
+          VSURF(data.log[,2:202], data.log[,1], clusterType = &quot;FORK&quot;, ntree = 2000,
+                mtry = 50)
+
+ } #3
+
+saveRDS(feature.set, &#39;data/features.rds&#39;) #4
+feature.set &lt;- readRDS(&quot;data/features.rds&quot;) #5</code></pre>
+</div>
+</div>
+<div id="b---using-the-lmmr-for-classification" class="section level1">
+<h1>B - Using the LMMR for classification</h1>
+</div>
+
+<p>Copyright &copy; 2016 Skynet, Inc. All rights reserved.</p>
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

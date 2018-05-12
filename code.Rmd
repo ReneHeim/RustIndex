@@ -1,0 +1,128 @@
+The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new 
+spectral disease index for the pathosystem _Austropuccinia psidii_ and 
+_Backhousia citriodora_. It utilizes a spectral dataset that was collected and 
+cleaned in a previous study and is structured as follows:
+
+* Column 1: __Type__ is a categorical variables referring to the spectral 
+classes ("Healthy", "Treated" and "Untreated"). 
+
+* Column 2 and follwoing: __X505-X2500__ are the wavebands along the 
+electromagnetic spectrum and have been recorded, using a field spectrometer, in
+spectral reflectance [%].
+
+Please refer to our previous article (Heim et al., 2018a) for more information:
+
+Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, 
+E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust 
+(Austropuccinia psidii) on lemon myrtle trees using spectral signatures and 
+machine learning. Plant Pathol, 67: 1114-1121. [doi:10.1111/ppa.12830](https://doi:10.1111/ppa.12830)
+
+The following code is structured according to the Method section in our current 
+artice (Heim et al., 2018b):
+
+![Figure 1: Workflow as described in the article.](workflow.png){width=400px}
+
+# Setup coding environment
+
+## Install and load packages
+
+Please run the following code to install required R packages
+```{r eval=FALSE}
+install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
+                   "PresenceAbsence", "prospectr", "rJava", "tidyverse",
+                   "VSURF", "reshape2", "caret"))
+```
+
+__Note:__ For the package _rJava_ it is necessary to set the path of the directory
+where Java is installed. Please install correct version of Java (32 or 64 bit) 
+before setting the path to the Java dir. For help pls follow this [LINK](https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r)
+
+For my machine I had to run:
+```{r eval=FALSE}
+Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151')
+```
+
+Now we load the installed packages:
+```{r eval=FALSE}
+library(cowplot) #modify and save ggplot2 output
+library(gdata) #for DropClass function
+library(roxygen2) #to read function documentation
+library(ggplot2)
+library(glmulti)
+library(hsdar)
+library(plyr)
+library(PresenceAbsence)
+library(prospectr)
+library(rJava)
+library(dplyr)
+library(VSURF)
+library(reshape2)
+library(caret) #classfication and regression 
+library(devtools)
+```
+
+Also the necessary functions: 
+```{r eval=FALSE}
+source("R/FUN_drop_cat_var.R")
+source("R/FUN_exportVSURF.R")
+source("R/FUN_raw2speclibhsdar.R")
+source("R/FUN_prepggwide2long.R")
+```
+
+And create a directory for the analysis output:
+```{r eval=FALSE}
+dir.create("output", FALSE, FALSE)
+```
+
+# A - From raw data to LMMR
+
+## Loading and preparing data
+
+The following chunk of code is loading the cleaned spectral data (1), is then 
+checking how many factor levels are stored in the _Type_ column (2) and also 
+dropping the level <Healthy> (3). The column _Type_ is assigned to a single 
+object for later use (4). Then, the remaining factor levels are converted (5) 
+into a binary (1=Untreated and 0=Treated) to be readable by a logistic 
+regression function. And finally, all reflectance values are log-transformed (6)
+to be able to design a ratio index in subsequent steps (__Note:__ log() is ln).
+```{r eval=FALSE}
+ori.data <- read.csv("data/data.wo.out.binned.cut.csv") #1
+
+levels(ori.data$Type) #2
+
+data <- DropClass(ori.data, ori.data$Type, "Healthy") #3
+
+Type <- data$Type #4
+
+data$Type <- ifelse(data$Type=='Untreated',1,0) #5
+
+data[names(data)[-1]] <- log(data[names(data)[-1]]) #6
+```
+
+## Feature selection (202 to 27 bands)
+
+The _VSURF_ package is used to conduct a pre-selection of important variables.
+This pre-selection was done as it reduced the total runtime of the analysis by 
+avoising a direct model selection procedure which would be more time consuming. 
+The _VSURF_ selection was repeated 10 times to account for random selection 
+encounters (~ 30h runtime).
+```{r eval=FALSE}
+set.seed(20180111)
+
+feature.set <- list() #1
+runs <- seq(1,10,1) #2
+for(i in runs){
+
+feature.set[[i]] <-
+          VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000,
+                mtry = 50)
+
+ } #3
+
+saveRDS(feature.set, 'data/features.rds') #4
+feature.set <- readRDS("data/features.rds") #5
+```
+
+# B - Using the LMMR for classification
+
+
