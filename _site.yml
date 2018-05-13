@@ -1,5 +1,5 @@
 name: LMMR Index
-output_dir: htmlfiles
+output_dir: docs
 navbar:
   title: LMMR Index
   left:
