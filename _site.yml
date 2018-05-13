@@ -1,17 +1,17 @@
-name: "LMMR Index"
-output_dir: "htmlfiles"
+name: LMMR Index
+output_dir: htmlfiles
 navbar:
-  title: "LMMR Index"
+  title: LMMR Index
   left:
-    - text: "Summary"
-      icon: fa-home
-      href: index.html
-    - text: "Data"
-      icon: fa-table
-      href: data.html
-    - text: "Code"
-      icon: fa-file-code-o
-      href: code.html
+  - text: Summary
+    icon: fas fa-clipboard
+    href: index.html
+  - text: Data
+    icon: fa-table
+    href: data.html
+  - text: Code
+    icon: fa-file-code-o
+    href: code.html
 output:
   html_document:
     theme: flatly
@@ -24,4 +24,4 @@ output:
     css: style.css
     lib_dir: site_libs
     self_contained: no
-      
+

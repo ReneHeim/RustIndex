@@ -40,11 +40,12 @@ library(plyr)
 library(PresenceAbsence)
 library(prospectr)
 library(rJava)
-library(tidyverse)
+library(ggplot2)
 library(VSURF)
 library(reshape2)
 library(caret)
 library(devtools)
+library(magrittr)
 
 
 # 2. Loading Functions and set project structure-----------------------------------------------------
@@ -54,8 +55,6 @@ source('R/20170601_FUN_exportVSURF.R')
 source('R/20171224_FUN_raw2speclibhsdar.R')
 source('R/20171224_FUN_prepggwide2long.R')
 
-dir.create('data', FALSE, FALSE) # Contains original data only (Do not modify!)
-dir.create('R', FALSE, FALSE) # Contains functions
 dir.create('output', FALSE, FALSE) # Code generated output
 
 ############################################################################################
@@ -120,8 +119,8 @@ multi.model <- glmulti(y=names(data)[1],xr=paste0('X',VSURF.selection),data,maxs
 
 model.1 <- glm(as.formula(summary(multi.model)$bestmodel),data,family=binomial)
 
-#saveRDS(model.1, 'output/LMMRmodel.RDS')
-#model.1 <- readRDS(file = 'output/LMMRmodel.RDS')
+saveRDS(model.1, 'output/LMMRmodel.RDS')
+model.1 <- readRDS(file = 'output/LMMRmodel.RDS')
 
 # 5.2 Build LMMR complex equation
 

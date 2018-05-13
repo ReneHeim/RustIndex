@@ -20,17 +20,20 @@ machine learning. Plant Pathol, 67: 1114-1121. [doi:10.1111/ppa.12830](https://d
 The following code is structured according to the Method section in our current 
 artice (Heim et al., 2018b):
 
-![Figure 1: Workflow as described in the article.](workflow.png){width=400px}
+```{r , echo=FALSE, fig.cap="A caption", out.width = '80%'}
+knitr::include_graphics("figs/workflow.png")
+```
+
 
 # Setup coding environment
 
 ## Install and load packages
 
 Please run the following code to install required R packages
-```{r eval=FALSE}
+```{r installpkgs, eval=FALSE}
 install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
-                   "PresenceAbsence", "prospectr", "rJava", "tidyverse",
-                   "VSURF", "reshape2", "caret"))
+                   "PresenceAbsence", "prospectr", "rJava", 
+                   "tidyverse", "VSURF", "reshape2", "caret"))
 ```
 
 __Note:__ For the package _rJava_ it is necessary to set the path of the directory
@@ -38,31 +41,27 @@ where Java is installed. Please install correct version of Java (32 or 64 bit)
 before setting the path to the Java dir. For help pls follow this [LINK](https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r)
 
 For my machine I had to run:
-```{r eval=FALSE}
+```{r setrjava, eval=FALSE}
 Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151')
 ```
 
 Now we load the installed packages:
-```{r eval=FALSE}
+```{r loadpkgs, results='hide', message=FALSE, warning=FALSE}
 library(cowplot) #modify and save ggplot2 output
 library(gdata) #for DropClass function
 library(roxygen2) #to read function documentation
-library(ggplot2)
-library(glmulti)
-library(hsdar)
-library(plyr)
-library(PresenceAbsence)
-library(prospectr)
-library(rJava)
-library(dplyr)
-library(VSURF)
-library(reshape2)
+library(ggplot2) #plot spectra
+library(glmulti) #for model selection
+library(hsdar) #build spectral library
+library(rJava) #required to run glmulti
+library(VSURF) # random forest based feature selection
+library(reshape2) #wide to long reformat
 library(caret) #classfication and regression 
-library(devtools)
+library(magrittr) #build pipes
 ```
 
 Also the necessary functions: 
-```{r eval=FALSE}
+```{r loadfcts}
 source("R/FUN_drop_cat_var.R")
 source("R/FUN_exportVSURF.R")
 source("R/FUN_raw2speclibhsdar.R")
@@ -70,11 +69,11 @@ source("R/FUN_prepggwide2long.R")
 ```
 
 And create a directory for the analysis output:
-```{r eval=FALSE}
+```{r createdir}
 dir.create("output", FALSE, FALSE)
 ```
 
-# A - From raw data to LMMR
+# A
 
 ## Loading and preparing data
 
@@ -82,15 +81,15 @@ The following chunk of code is loading the cleaned spectral data (1), is then
 checking how many factor levels are stored in the _Type_ column (2) and also 
 dropping the level <Healthy> (3). The column _Type_ is assigned to a single 
 object for later use (4). Then, the remaining factor levels are converted (5) 
-into a binary (1=Untreated and 0=Treated) to be readable by a logistic 
+into a binary (1=<Untreated> and 0=<Treated>) to be readable by a logistic 
 regression function. And finally, all reflectance values are log-transformed (6)
 to be able to design a ratio index in subsequent steps (__Note:__ log() is ln).
-```{r eval=FALSE}
+```{r data, results='hide'}
 ori.data <- read.csv("data/data.wo.out.binned.cut.csv") #1
 
 levels(ori.data$Type) #2
 
-data <- DropClass(ori.data, ori.data$Type, "Healthy") #3
+data <- drop_class(ori.data, ori.data$Type, "Healthy") #3
 
 Type <- data$Type #4
 
@@ -99,30 +98,524 @@ data$Type <- ifelse(data$Type=='Untreated',1,0) #5
 data[names(data)[-1]] <- log(data[names(data)[-1]]) #6
 ```
 
-## Feature selection (202 to 27 bands)
+## Feature selection
 
 The _VSURF_ package is used to conduct a pre-selection of important variables.
 This pre-selection was done as it reduced the total runtime of the analysis by 
 avoising a direct model selection procedure which would be more time consuming. 
 The _VSURF_ selection was repeated 10 times to account for random selection 
 encounters (~ 30h runtime).
-```{r eval=FALSE}
+```{r vsurf, eval=FALSE}
 set.seed(20180111)
 
-feature.set <- list() #1
-runs <- seq(1,10,1) #2
-for(i in runs){
+feature.set <- list() # 1
+runs <- seq(1, 10, 1) # 2
+for (i in runs) {
+  feature.set[[i]] <-
+    VSURF(data[, 2:202], data[, 1],
+      clusterType = "FORK", ntree = 2000,
+      mtry = 50
+    )
+} # 3
 
-feature.set[[i]] <-
-          VSURF(data.log[,2:202], data.log[,1], clusterType = "FORK", ntree = 2000,
-                mtry = 50)
+saveRDS(feature.set, "data/features.rds") # 4
+```
 
- } #3
-
-saveRDS(feature.set, 'data/features.rds') #4
+```{r loadfeatures}
 feature.set <- readRDS("data/features.rds") #5
 ```
 
-# B - Using the LMMR for classification
+As we ran the _VSURF_ feature selection ten times, the container list (1) was 
+filled with ten result object where each contains, amongst others, three vectors 
+of important variables. One vector (varselect.thres) contains a coarse set of 
+important features, another (varselect.interp) a refined set, and a third 
+contains a set of important features with no redundancy. Pls refer to __(CITE)__ 
+for more information on the differents sets. For our analysis, we want to find 
+the  unique wavebands among all ten selections. Therefore a result list was 
+created (2), we looped through each single object (3) to assign them to the 
+result list (band.vectors). This list was turned into a single object (4) and 
+all unique wavebands were selected (5).
+```{r extractbands}
+runs <- seq(1, length(feature.set), 1) # 1
+band.vectors <- list() # 2
+
+for (i in runs) {
+  band.vectors[[i]] <-
+    export_vsurf(feature.set[[i]]$varselect.pred, data[, 2:202])
+} # 3
+
+VSURF.selection <- unlist(band.vectors) # 4
+VSURF.selection <- sort(unique(VSURF.selection)) # 5
+```
+
+The 27 unique, most important wavebands could be used as input for an exhaustive
+model selection procedure using the package _glmulti_. We first set a seed (1)
+to avoid random number processing and reproduce our results and then run the 
+model selection (2) to find the four most important wavebands. As _glmulti_ does
+not provide model coefficients, another logistic regression was run (3) on the 
+_glmulti_ result to find coefficients for the model. We save (4) and reload (5)
+the final model to reproduce our results quicker when re-running the code.
+Eventually, the coefficients (6) and the most important wavebands (7) of the 
+final model were used to generate a linear function (8) that is most suitable to
+discriminate <Treated> and <Untreated> trees.
+
+```{r glmulti, eval=FALSE}
+set.seed(20180117) # 1
+
+multi.model <- glmulti(y = names(data)[1],
+                       xr = paste0("X", VSURF.selection),
+                       data, maxsize = 4,
+                       level = 1,
+                       family = binomial) # 2
+
+model.1 <- glm(as.formula(summary(multi.model)$bestmodel),
+               data,
+               family = binomial) # 3
+
+saveRDS(model.1, "output/LMMRmodel.RDS") # 4
+```
+
+```{r loadmodel}
+model.1 <- readRDS(file = 'output/LMMRmodel.RDS') #5
+```
+
+```{r modelout}
+coefficients(model.1) # 6
+best.bands <- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # 7
+
+LMMR.model.eq <- "log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] + 45.993 log[R1505] - 46.831 log[R2195]" # 8
+```
 
 
+Based on the LMMR model we designed the LMMR index through mathematical 
+simplification. We initially log transformed the spectral reflectance to apply 
+Eq. 2 and 3 (Heim et al., 2018b). Additionally, to summarize the model 
+coefficients and yield 5/3 as a simplification, the absolute 95% confidence 
+intervals for coefficient pairs should overlap as this indicates products of 
+approximately equal magnitudes. Please refer to our article for the 
+required steps yielding the LMMR.
+```{r confint, message=FALSE}
+confint(model.1)
+```
+
+```{r confintplot, results='hide', message=FALSE, warning=FALSE, echo=FALSE}
+y = coef(model.1)
+x = seq_along(y)
+ci = confint(model.1)
+xlim = range(x) + c(-0.5,0.2)
+ylim = range(ci)
+ylim = ylim + 0.1*c(-1,+1)*diff(ylim) # extend it a little
+ylab = bquote(hat(beta))
+xlab = "coefficient"
+
+par(mar=c(4.5,5,1,1), las=1)
+plot(y, pch=16, xlim=xlim, ylim=ylim, xlab=xlab, ylab=ylab, xaxt="n", bty="n")
+axis(1, at=x, labels=names(y), tick=FALSE)
+abline(h=0, lty=3)
+arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
+```
+
+
+
+# B
+
+## Create spectral library
+```{r speclib}
+spectra <-
+  read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE) %>%
+  drop_class(., .$Type, "Healthy") %>%
+  raw2speclib(.)
+```
+
+## Define spectral vegetation indices
+
+We use the _hsdar_ pkg to define spectral indices. The PRI and MCARI already 
+exist in the package and we add the NBNDVI (1) and the LMMR (2). We store them 
+all in a vector to process them that way (3).
+```{r indices}
+NBNDVI <- '(R850-R680)/(R850+R680)' #1
+LMMR <- '((R545/R555)^(5/3))*(R1505/R2195)' #2
+
+index <- c("PRI", "MCARI", NBNDVI, LMMR) #3
+
+```
+
+After the indices have been defined we can use them to convert our spectral data
+into index values by applying the indices on our spectral data (1-4). The LMMR 
+must be transformed to the log scale (4) as it was developed that way and to use
+a fair comparison. We yield a new dataset (5) that contains index values and we 
+add a column (6) containing the response (<Treated>, <Untreated>) for our 
+classification.
+
+```{r indexdata}
+index.list <- list()
+
+index.list[['PRI']] <- vegindex(spectra, index[1]) #1
+index.list[['MCARI']] <- vegindex(spectra, index[2]) #2
+index.list[['NBNDVI']] <- vegindex(spectra, index[3]) #3
+index.list[['LMMR']] <- log(vegindex(spectra, index[4])) #4
+
+index.df <- do.call(cbind.data.frame, index.list) #5
+index.df$Type <- Type #6
+
+write.csv(index.df, "output/specindices.csv", row.names = FALSE)
+```
+
+## Classification
+
+First we split (1) our index dataset into training (2) and testing (3) to build 
+a logistic regression model (train) and validate this model on an isolated 
+sample (test). We also define classification parameters (4). For classification 
+we used the _caret_ pkg. 
+```{r splitdata}
+inTrain <- createDataPartition(y = index.df$Type, p = .75, list = FALSE) #1
+
+Train.75 <- index.df[inTrain,] #2
+Test.25 <- index.df[-inTrain,] #3
+
+ctrl <- trainControl(method = "boot",
+                     number = 1000, 
+                     classProbs = FALSE, 
+                     savePredictions = TRUE) #4
+```
+
+```{r training, results='hide'}
+# PRI Training
+PRI.model <- train(Type ~ PRI, 
+                   data = Train.75, 
+                   method = "glm", 
+                   trControl = ctrl, 
+                   metric = c('Kappa'))
+
+PRIvalues <- PRI.model$finalModel$fitted.values
+
+sink(file = "output/PRItrain75eval.txt")
+PRI.model$pred
+summary(PRI.model)# estimates
+confusionMatrix(PRI.model)
+sink()
+
+# MCARI Training
+MCARI.model <- train(Type ~ MCARI,
+                     data = Train.75, 
+                     method = "glm", 
+                     trControl = ctrl, 
+                     metric = c("Kappa"))
+
+MCARIvalues <- MCARI.model$finalModel$fitted.values
+
+sink(file = "output/MCARItrain75eval.txt")
+MCARI.model$pred
+summary(MCARI.model)
+confusionMatrix(MCARI.model)
+sink()
+
+
+# NBNDVI Training
+NBNDVI.model <- train(Type ~ NBNDVI,
+                      data = Train.75,
+                      method = "glm",
+                      trControl = ctrl,
+                      metric = c("Kappa"))
+
+NBNDVIvalues <- NBNDVI.model$finalModel$fitted.values
+
+sink(file = "output/NBNDVItrain75eval.txt")
+NBNDVI.model$pred
+summary(NBNDVI.model)
+confusionMatrix(NBNDVI.model)
+sink()
+
+
+# LMMR Training
+LMMR.model <- train(Type ~ LMMR,
+                    data = Train.75,
+                    method = "glm",
+                    trControl = ctrl,
+                    metric = c("Kappa"))
+
+LMMRvalues <- LMMR.model$finalModel$fitted.values
+
+sink(file = "output/LMMRtrain75eval.txt")
+LMMR.model$pred
+summary(LMMR.model)
+confusionMatrix(LMMR.model)
+sink()
+
+```
+
+```{r testing, results='hide'}
+# PRI Testing
+PRI.pred <- predict(PRI.model, newdata = Test.25)
+
+sink("output/PRITest25.txt", append=FALSE, split=FALSE)
+confusionMatrix(data = PRI.pred, Test.25$Type)
+sink()
+
+# MCARI Test
+MCARI.pred <- predict(MCARI.model, newdata = Test.25)
+
+sink("output/MCARITest25.txt", append=FALSE, split=FALSE)
+confusionMatrix(data = MCARI.pred, Test.25$Type)
+sink()
+
+
+# NBNDVI Test
+NBNDVI.pred <- predict(NBNDVI.model, newdata = Test.25)
+
+sink("output/NBNDVITest25.txt", append=FALSE, split=FALSE)
+confusionMatrix(data = NBNDVI.pred, Test.25$Type)
+sink()
+
+
+# LMMR Test
+LMMR.pred <- predict(LMMR.model, newdata = Test.25)
+
+sink("output/LMMRTest25.txt", append=FALSE, split=FALSE)
+confusionMatrix(data = LMMR.pred, Test.25$Type)
+sink()
+```
+
+## Visualize classification training
+
+First we build a df using the fitted values of the training process for each 
+index (1-5) and add useful names for each column (6).
+```{r datatrain}
+
+
+train.res.df <- as.data.frame(Train.75$Type) #1
+train.res.df$PRIval <- PRIvalues #2
+train.res.df$MCARIval <- MCARIvalues #3
+train.res.df$NBNDVIval <- NBNDVIvalues #4
+train.res.df$LMMRval <- LMMRvalues #5
+
+names(train.res.df) <- c('Type', 'PRI', 'MCARI', 'NBNDVI', 'LMMR') #6
+  
+```
+
+Then we can plot the results of the training process.
+```{r plottrain, echo=FALSE}
+indi <- names(train.res.df[, 2:length(train.res.df)])
+plot_list <- list()
+for (i in indi) {
+
+plot_list[[i]] <- ggplot(train.res.df, aes_string(train.res.df$Type, train.res.df[, i], colour = train.res.df$Type))+
+  geom_jitter(aes(shape=Type),height = 0)+
+  geom_boxplot(colour = 'black', alpha = 0.5, outlier.alpha = 0)+
+  theme(axis.text = element_text(size = 16),
+        axis.title = element_text(size = 16, face = "bold"),
+        legend.position = "none")+
+        xlab(label = paste(i))+
+        ylab(label = 'Index Value')+
+        ylim(0, 1)
+}
+
+
+p1 <- plot_grid(
+  plot_list[[4]],
+  plot_list[[2]],
+  plot_list[[3]],
+  plot_list[[1]],
+  labels = c("a", 'b', 'c', 'd'),
+  ncol = 4,
+  nrow = 1)
+
+p1
+```
+
+## Model validation
+
+## {.tabset}
+### PRI 
+
+```{r PRItest, echo=FALSE}
+confmat.PRI <- confusionMatrix(data = PRI.pred, Test.25$Type)
+confmat.PRI
+```
+
+### MCARI
+
+```{r MCARItest, echo=FALSE}
+confmat.MCARI <- confusionMatrix(data = MCARI.pred, Test.25$Type)
+confmat.MCARI
+```
+
+### NBNDVI
+
+```{r NBNDVItest, echo=FALSE}
+confmat.NBNDVI <- confusionMatrix(data = NBNDVI.pred, Test.25$Type)
+confmat.NBNDVI
+```
+
+### LMMR
+
+```{r LMMRtest, echo=FALSE}
+confmat.LMMR <- confusionMatrix(data = LMMR.pred, Test.25$Type)
+confmat.LMMR
+```
+
+## Visualize spectra
+
+Finally, we can visualize the spectral signature for each classification group
+(<Treated> and <Untreated>) and show the most important wavebands. First, we 
+reformat our wide df into a long df (1). In a second step, we get the selected 
+best bands (2) from a previous step and remove the X to have a numeric vector (3).
+```{r wide2long}
+specdat <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
+spectra.gg <- prep_gg(specdat) #1
+
+bands4gg <-as.numeric(gsub('X', '', best.bands)) #2, 3
+```
+    
+Now we can plot the spectral signatures:
+```{r plotspec, echo=FALSE}
+pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
+  geom_line(aes(linetype=Type), size = 1)+
+  geom_point(aes(shape=Type), size = 2)+
+  annotate(
+    "rect",
+    xmin = 500,
+    xmax = 570,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'green'
+  ) +
+  annotate(
+    "rect",
+    xmin = 570,
+    xmax = 590,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'yellow'
+  ) +
+  annotate(
+    "rect",
+    xmin = 590,
+    xmax = 610,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'orange'
+  ) +
+  annotate(
+    "rect",
+    xmin = 610,
+    xmax = 700,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = c("red")
+  ) +
+  annotate(
+    "rect",
+    xmin = 700,
+    xmax = 1300,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = c("lightgrey")
+  ) +
+  annotate(
+    "rect",
+    xmin = 1300,
+    xmax = 2500,
+    ymin = -Inf,
+    ymax = Inf,
+    alpha = .2,
+    fill = 'white'
+  ) +
+  annotate(
+    "text",
+    x = 600,
+    y = 30,
+    label = "VIS",
+    fontface = "bold",
+    size = 5
+  ) +
+  annotate(
+    "text",
+    x = 1000,
+    y = 30,
+    label = "NIR",
+    fontface = "bold",
+    size = 5
+  ) +
+  annotate(
+    "text",
+    x = 1900,
+    y = 30,
+    label = "SWIR",
+    fontface = "bold",
+    size = 5
+  ) +
+  geom_vline(
+    xintercept = bands4gg,
+    col = "black",
+    linetype = "twodash",
+    size = 1,
+    alpha = .5
+  ) +
+  theme_set(theme_bw(base_size = 20))+
+  theme(legend.position = c(.90, .88), legend.title = element_blank(), legend.background = element_blank())
+
+```
+```{r specplot,dpi= 300, fig.width=6, fig.height=4, echo=FALSE}
+pspec
+```
+
+We combine the last two plots, as shown in the article and save the plot:
+```{r saveplot, results='hide'}
+
+# C) Get bar/jitter plots from 7A and modify to combine with 7B
+
+p5 <- plot_list[[2]]#MCARI
+p5 <- p5+
+  theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p6 <- plot_list[[3]]#NBNDVI
+p6 <- p6+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p7 <- plot_list[[4]]#LMMR
+p7 <- p7+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p9 <- plot_list[[1]]#PRI
+p9 <- p9+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank())+
+      labs(x = "PRI", y="Disease Prob.")
+  
+# D) Build Figure 2
+    
+plot.res <- ggdraw() +
+    draw_plot(p9, x = 0, y = .5, width = .25, height = .5) +
+    draw_plot(p5, x = .25, y = .5, width = .25, height = .5) +
+    draw_plot(p6, x = .5, y = .5, width = .25, height = .5) +
+    draw_plot(p7, x = .75, y = .5, width = .25, height = .5) +
+      draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
+        draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 12,
+                        x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
+
+ggsave("output/Figure2.boxspectra.png",
+    plot = plot.res,
+    width = 40,
+    height = 20,
+    units = "cm",
+    dpi = 400
+  )
+```
+
+  

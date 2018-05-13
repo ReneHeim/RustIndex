@@ -1,0 +1,34 @@
+
+Call:
+NULL
+
+Deviance Residuals: 
+   Min      1Q  Median      3Q     Max  
+-1.754  -1.120  -1.004   1.206   1.401  
+
+Coefficients:
+            Estimate Std. Error z value Pr(>|z|)   
+(Intercept)    3.271      1.175   2.785  0.00536 **
+NBNDVI        -4.037      1.425  -2.833  0.00461 **
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 482.33  on 347  degrees of freedom
+Residual deviance: 473.57  on 346  degrees of freedom
+AIC: 477.57
+
+Number of Fisher Scoring iterations: 4
+
+Bootstrapped (1000 reps) Confusion Matrix 
+
+(entries are percentual average cell counts across resamples)
+ 
+           Reference
+Prediction  Treated Untreated
+  Treated      34.5      28.3
+  Untreated    16.4      20.9
+                            
+ Accuracy (average) : 0.5537
+

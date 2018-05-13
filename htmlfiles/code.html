@@ -285,7 +285,7 @@ div.tocify {
       <ul class="nav navbar-nav">
         <li>
   <a href="index.html">
-    <span class="fa fa-home"></span>
+    <span class="fas fa fas fa-clipboard"></span>
      
     Summary
   </a>
@@ -329,8 +329,10 @@ div.tocify {
 <p>Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust (Austropuccinia psidii) on lemon myrtle trees using spectral signatures and machine learning. Plant Pathol, 67: 1114-1121. <a href="https://doi:10.1111/ppa.12830">doi:10.1111/ppa.12830</a></p>
 <p>The following code is structured according to the Method section in our current artice (Heim et al., 2018b):</p>
 <div class="figure">
-<img src="workflow.png" alt="Figure 1: Workflow as described in the article." width="400" />
-<p class="caption">Figure 1: Workflow as described in the article.</p>
+<img src="figs/workflow.png" alt="A caption" width="80%" />
+<p class="caption">
+A caption
+</p>
 </div>
 <div id="setup-coding-environment" class="section level1">
 <h1>Setup coding environment</h1>
@@ -338,8 +340,8 @@ div.tocify {
 <h2>Install and load packages</h2>
 <p>Please run the following code to install required R packages</p>
 <pre class="r"><code>install.packages(c(&quot;cowplot&quot;, &quot;gdata&quot;, &quot;glmulti&quot;, &quot;hsdar&quot;, &quot;plyr&quot;,
-                   &quot;PresenceAbsence&quot;, &quot;prospectr&quot;, &quot;rJava&quot;, &quot;tidyverse&quot;,
-                   &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;))</code></pre>
+                   &quot;PresenceAbsence&quot;, &quot;prospectr&quot;, &quot;rJava&quot;, 
+                   &quot;tidyverse&quot;, &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;))</code></pre>
 <p><strong>Note:</strong> For the package <em>rJava</em> it is necessary to set the path of the directory where Java is installed. Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir. For help pls follow this <a href="https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r">LINK</a></p>
 <p>For my machine I had to run:</p>
 <pre class="r"><code>Sys.setenv(JAVA_HOME=&#39;C:\\Program Files\\Java\\jre1.8.0_151&#39;)</code></pre>
@@ -347,18 +349,14 @@ div.tocify {
 <pre class="r"><code>library(cowplot) #modify and save ggplot2 output
 library(gdata) #for DropClass function
 library(roxygen2) #to read function documentation
-library(ggplot2)
-library(glmulti)
-library(hsdar)
-library(plyr)
-library(PresenceAbsence)
-library(prospectr)
-library(rJava)
-library(dplyr)
-library(VSURF)
-library(reshape2)
+library(ggplot2) #plot spectra
+library(glmulti) #for model selection
+library(hsdar) #build spectral library
+library(rJava) #required to run glmulti
+library(VSURF) # random forest based feature selection
+library(reshape2) #wide to long reformat
 library(caret) #classfication and regression 
-library(devtools)</code></pre>
+library(magrittr) #build pipes</code></pre>
 <p>Also the necessary functions:</p>
 <pre class="r"><code>source(&quot;R/FUN_drop_cat_var.R&quot;)
 source(&quot;R/FUN_exportVSURF.R&quot;)
@@ -368,16 +366,16 @@ source(&quot;R/FUN_prepggwide2long.R&quot;)</code></pre>
 <pre class="r"><code>dir.create(&quot;output&quot;, FALSE, FALSE)</code></pre>
 </div>
 </div>
-<div id="a---from-raw-data-to-lmmr" class="section level1">
-<h1>A - From raw data to LMMR</h1>
+<div id="a" class="section level1">
+<h1>A</h1>
 <div id="loading-and-preparing-data" class="section level2">
 <h2>Loading and preparing data</h2>
-<p>The following chunk of code is loading the cleaned spectral data (1), is then checking how many factor levels are stored in the <em>Type</em> column (2) and also dropping the level <Healthy> (3). The column <em>Type</em> is assigned to a single object for later use (4). Then, the remaining factor levels are converted (5) into a binary (1=Untreated and 0=Treated) to be readable by a logistic regression function. And finally, all reflectance values are log-transformed (6) to be able to design a ratio index in subsequent steps (<strong>Note:</strong> log() is ln).</p>
+<p>The following chunk of code is loading the cleaned spectral data (1), is then checking how many factor levels are stored in the <em>Type</em> column (2) and also dropping the level <Healthy> (3). The column <em>Type</em> is assigned to a single object for later use (4). Then, the remaining factor levels are converted (5) into a binary (1=<Untreated> and 0=<Treated>) to be readable by a logistic regression function. And finally, all reflectance values are log-transformed (6) to be able to design a ratio index in subsequent steps (<strong>Note:</strong> log() is ln).</p>
 <pre class="r"><code>ori.data &lt;- read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;) #1
 
 levels(ori.data$Type) #2
 
-data &lt;- DropClass(ori.data, ori.data$Type, &quot;Healthy&quot;) #3
+data &lt;- drop_class(ori.data, ori.data$Type, &quot;Healthy&quot;) #3
 
 Type &lt;- data$Type #4
 
@@ -385,27 +383,391 @@ data$Type &lt;- ifelse(data$Type==&#39;Untreated&#39;,1,0) #5
 
 data[names(data)[-1]] &lt;- log(data[names(data)[-1]]) #6</code></pre>
 </div>
-<div id="feature-selection-202-to-27-bands" class="section level2">
-<h2>Feature selection (202 to 27 bands)</h2>
+<div id="feature-selection" class="section level2">
+<h2>Feature selection</h2>
 <p>The <em>VSURF</em> package is used to conduct a pre-selection of important variables. This pre-selection was done as it reduced the total runtime of the analysis by avoising a direct model selection procedure which would be more time consuming. The <em>VSURF</em> selection was repeated 10 times to account for random selection encounters (~ 30h runtime).</p>
 <pre class="r"><code>set.seed(20180111)
 
-feature.set &lt;- list() #1
-runs &lt;- seq(1,10,1) #2
-for(i in runs){
+feature.set &lt;- list() # 1
+runs &lt;- seq(1, 10, 1) # 2
+for (i in runs) {
+  feature.set[[i]] &lt;-
+    VSURF(data[, 2:202], data[, 1],
+      clusterType = &quot;FORK&quot;, ntree = 2000,
+      mtry = 50
+    )
+} # 3
 
-feature.set[[i]] &lt;-
-          VSURF(data.log[,2:202], data.log[,1], clusterType = &quot;FORK&quot;, ntree = 2000,
-                mtry = 50)
+saveRDS(feature.set, &quot;data/features.rds&quot;) # 4</code></pre>
+<pre class="r"><code>feature.set &lt;- readRDS(&quot;data/features.rds&quot;) #5</code></pre>
+<p>As we ran the <em>VSURF</em> feature selection ten times, the container list (1) was filled with ten result object where each contains, amongst others, three vectors of important variables. One vector (varselect.thres) contains a coarse set of important features, another (varselect.interp) a refined set, and a third contains a set of important features with no redundancy. Pls refer to <strong>(CITE)</strong> for more information on the differents sets. For our analysis, we want to find the unique wavebands among all ten selections. Therefore a result list was created (2), we looped through each single object (3) to assign them to the result list (band.vectors). This list was turned into a single object (4) and all unique wavebands were selected (5).</p>
+<pre class="r"><code>runs &lt;- seq(1, length(feature.set), 1) # 1
+band.vectors &lt;- list() # 2
 
- } #3
+for (i in runs) {
+  band.vectors[[i]] &lt;-
+    export_vsurf(feature.set[[i]]$varselect.pred, data[, 2:202])
+} # 3
 
-saveRDS(feature.set, &#39;data/features.rds&#39;) #4
-feature.set &lt;- readRDS(&quot;data/features.rds&quot;) #5</code></pre>
+VSURF.selection &lt;- unlist(band.vectors) # 4
+VSURF.selection &lt;- sort(unique(VSURF.selection)) # 5</code></pre>
+<p>The 27 unique, most important wavebands could be used as input for an exhaustive model selection procedure using the package <em>glmulti</em>. We first set a seed (1) to avoid random number processing and reproduce our results and then run the model selection (2) to find the four most important wavebands. As <em>glmulti</em> does not provide model coefficients, another logistic regression was run (3) on the <em>glmulti</em> result to find coefficients for the model. We save (4) and reload (5) the final model to reproduce our results quicker when re-running the code. Eventually, the coefficients (6) and the most important wavebands (7) of the final model were used to generate a linear function (8) that is most suitable to discriminate <Treated> and <Untreated> trees.</p>
+<pre class="r"><code>set.seed(20180117) # 1
+
+multi.model &lt;- glmulti(y = names(data)[1],
+                       xr = paste0(&quot;X&quot;, VSURF.selection),
+                       data, maxsize = 4,
+                       level = 1,
+                       family = binomial) # 2
+
+model.1 &lt;- glm(as.formula(summary(multi.model)$bestmodel),
+               data,
+               family = binomial) # 3
+
+saveRDS(model.1, &quot;output/LMMRmodel.RDS&quot;) # 4</code></pre>
+<pre class="r"><code>model.1 &lt;- readRDS(file = &#39;output/LMMRmodel.RDS&#39;) #5</code></pre>
+<pre class="r"><code>coefficients(model.1) # 6</code></pre>
+<pre><code>## (Intercept)        X545        X555       X1505       X2195 
+##    18.38680    75.38174   -78.80910    45.99251   -46.83051</code></pre>
+<pre class="r"><code>best.bands &lt;- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # 7
+
+LMMR.model.eq &lt;- &quot;log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] + 45.993 log[R1505] - 46.831 log[R2195]&quot; # 8</code></pre>
+<p>Based on the LMMR model we designed the LMMR index through mathematical simplification. We initially log transformed the spectral reflectance to apply Eq. 2 and 3 (Heim et al., 2018b). Additionally, to summarize the model coefficients and yield 5/3 as a simplification, the absolute 95% confidence intervals for coefficient pairs should overlap as this indicates products of approximately equal magnitudes. Please refer to our article for the required steps yielding the LMMR.</p>
+<pre class="r"><code>confint(model.1)</code></pre>
+<pre><code>##                  2.5 %    97.5 %
+## (Intercept)   9.964532  27.46334
+## X545         57.012245  96.08337
+## X555        -99.922625 -60.08532
+## X1505        37.325040  56.02228
+## X2195       -57.069230 -38.04457</code></pre>
+<p><img src="code_files/figure-html/confintplot-1.png" width="672" /></p>
 </div>
 </div>
-<div id="b---using-the-lmmr-for-classification" class="section level1">
-<h1>B - Using the LMMR for classification</h1>
+<div id="b" class="section level1">
+<h1>B</h1>
+<div id="create-spectral-library" class="section level2">
+<h2>Create spectral library</h2>
+<pre class="r"><code>spectra &lt;-
+  read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;, check.names = FALSE) %&gt;%
+  drop_class(., .$Type, &quot;Healthy&quot;) %&gt;%
+  raw2speclib(.)</code></pre>
+</div>
+<div id="define-spectral-vegetation-indices" class="section level2">
+<h2>Define spectral vegetation indices</h2>
+<p>We use the <em>hsdar</em> pkg to define spectral indices. The PRI and MCARI already exist in the package and we add the NBNDVI (1) and the LMMR (2). We store them all in a vector to process them that way (3).</p>
+<pre class="r"><code>NBNDVI &lt;- &#39;(R850-R680)/(R850+R680)&#39; #1
+LMMR &lt;- &#39;((R545/R555)^(5/3))*(R1505/R2195)&#39; #2
+
+index &lt;- c(&quot;PRI&quot;, &quot;MCARI&quot;, NBNDVI, LMMR) #3</code></pre>
+<p>After the indices have been defined we can use them to convert our spectral data into index values by applying the indices on our spectral data (1-4). The LMMR must be transformed to the log scale (4) as it was developed that way and to use a fair comparison. We yield a new dataset (5) that contains index values and we add a column (6) containing the response (<Treated>, <Untreated>) for our classification.</p>
+<pre class="r"><code>index.list &lt;- list()
+
+index.list[[&#39;PRI&#39;]] &lt;- vegindex(spectra, index[1]) #1
+index.list[[&#39;MCARI&#39;]] &lt;- vegindex(spectra, index[2]) #2
+index.list[[&#39;NBNDVI&#39;]] &lt;- vegindex(spectra, index[3]) #3
+index.list[[&#39;LMMR&#39;]] &lt;- log(vegindex(spectra, index[4])) #4
+
+index.df &lt;- do.call(cbind.data.frame, index.list) #5
+index.df$Type &lt;- Type #6
+
+write.csv(index.df, &quot;output/specindices.csv&quot;, row.names = FALSE)</code></pre>
+</div>
+<div id="classification" class="section level2">
+<h2>Classification</h2>
+<p>First we split (1) our index dataset into training (2) and testing (3) to build a logistic regression model (train) and validate this model on an isolated sample (test). We also define classification parameters (4). For classification we used the <em>caret</em> pkg.</p>
+<pre class="r"><code>inTrain &lt;- createDataPartition(y = index.df$Type, p = .75, list = FALSE) #1
+
+Train.75 &lt;- index.df[inTrain,] #2
+Test.25 &lt;- index.df[-inTrain,] #3
+
+ctrl &lt;- trainControl(method = &quot;boot&quot;,
+                     number = 1000, 
+                     classProbs = FALSE, 
+                     savePredictions = TRUE) #4</code></pre>
+<pre class="r"><code># PRI Training
+PRI.model &lt;- train(Type ~ PRI, 
+                   data = Train.75, 
+                   method = &quot;glm&quot;, 
+                   trControl = ctrl, 
+                   metric = c(&#39;Kappa&#39;))
+
+PRIvalues &lt;- PRI.model$finalModel$fitted.values
+
+sink(file = &quot;output/PRItrain75eval.txt&quot;)
+PRI.model$pred
+summary(PRI.model)# estimates
+confusionMatrix(PRI.model)
+sink()
+
+# MCARI Training
+MCARI.model &lt;- train(Type ~ MCARI,
+                     data = Train.75, 
+                     method = &quot;glm&quot;, 
+                     trControl = ctrl, 
+                     metric = c(&quot;Kappa&quot;))
+
+MCARIvalues &lt;- MCARI.model$finalModel$fitted.values
+
+sink(file = &quot;output/MCARItrain75eval.txt&quot;)
+MCARI.model$pred
+summary(MCARI.model)
+confusionMatrix(MCARI.model)
+sink()
+
+
+# NBNDVI Training
+NBNDVI.model &lt;- train(Type ~ NBNDVI,
+                      data = Train.75,
+                      method = &quot;glm&quot;,
+                      trControl = ctrl,
+                      metric = c(&quot;Kappa&quot;))
+
+NBNDVIvalues &lt;- NBNDVI.model$finalModel$fitted.values
+
+sink(file = &quot;output/NBNDVItrain75eval.txt&quot;)
+NBNDVI.model$pred
+summary(NBNDVI.model)
+confusionMatrix(NBNDVI.model)
+sink()
+
+
+# LMMR Training
+LMMR.model &lt;- train(Type ~ LMMR,
+                    data = Train.75,
+                    method = &quot;glm&quot;,
+                    trControl = ctrl,
+                    metric = c(&quot;Kappa&quot;))
+
+LMMRvalues &lt;- LMMR.model$finalModel$fitted.values
+
+sink(file = &quot;output/LMMRtrain75eval.txt&quot;)
+LMMR.model$pred
+summary(LMMR.model)
+confusionMatrix(LMMR.model)
+sink()</code></pre>
+<pre class="r"><code># PRI Testing
+PRI.pred &lt;- predict(PRI.model, newdata = Test.25)
+
+sink(&quot;output/PRITest25.txt&quot;, append=FALSE, split=FALSE)
+confusionMatrix(data = PRI.pred, Test.25$Type)
+sink()
+
+# MCARI Test
+MCARI.pred &lt;- predict(MCARI.model, newdata = Test.25)
+
+sink(&quot;output/MCARITest25.txt&quot;, append=FALSE, split=FALSE)
+confusionMatrix(data = MCARI.pred, Test.25$Type)
+sink()
+
+
+# NBNDVI Test
+NBNDVI.pred &lt;- predict(NBNDVI.model, newdata = Test.25)
+
+sink(&quot;output/NBNDVITest25.txt&quot;, append=FALSE, split=FALSE)
+confusionMatrix(data = NBNDVI.pred, Test.25$Type)
+sink()
+
+
+# LMMR Test
+LMMR.pred &lt;- predict(LMMR.model, newdata = Test.25)
+
+sink(&quot;output/LMMRTest25.txt&quot;, append=FALSE, split=FALSE)
+confusionMatrix(data = LMMR.pred, Test.25$Type)
+sink()</code></pre>
+</div>
+<div id="visualize-classification-training" class="section level2">
+<h2>Visualize classification training</h2>
+<p>First we build a df using the fitted values of the training process for each index (1-5) and add useful names for each column (6).</p>
+<pre class="r"><code>train.res.df &lt;- as.data.frame(Train.75$Type) #1
+train.res.df$PRIval &lt;- PRIvalues #2
+train.res.df$MCARIval &lt;- MCARIvalues #3
+train.res.df$NBNDVIval &lt;- NBNDVIvalues #4
+train.res.df$LMMRval &lt;- LMMRvalues #5
+
+names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39;NBNDVI&#39;, &#39;LMMR&#39;) #6</code></pre>
+<p>Then we can plot the results of the training process. <img src="code_files/figure-html/plottrain-1.png" width="672" /></p>
+</div>
+<div id="model-validation" class="section level2">
+<h2>Model validation</h2>
+</div>
+<div id="section" class="section level2 tabset">
+<h2></h2>
+<div id="pri" class="section level3">
+<h3>PRI</h3>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##            Reference
+## Prediction  Treated Untreated
+##   Treated        37        27
+##   Untreated      22        30
+##                                           
+##                Accuracy : 0.5776          
+##                  95% CI : (0.4824, 0.6687)
+##     No Information Rate : 0.5086          
+##     P-Value [Acc &gt; NIR] : 0.0816          
+##                                           
+##                   Kappa : 0.1537          
+##  Mcnemar&#39;s Test P-Value : 0.5677          
+##                                           
+##             Sensitivity : 0.6271          
+##             Specificity : 0.5263          
+##          Pos Pred Value : 0.5781          
+##          Neg Pred Value : 0.5769          
+##              Prevalence : 0.5086          
+##          Detection Rate : 0.3190          
+##    Detection Prevalence : 0.5517          
+##       Balanced Accuracy : 0.5767          
+##                                           
+##        &#39;Positive&#39; Class : Treated         
+## </code></pre>
+</div>
+<div id="mcari" class="section level3">
+<h3>MCARI</h3>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##            Reference
+## Prediction  Treated Untreated
+##   Treated        39        18
+##   Untreated      20        39
+##                                           
+##                Accuracy : 0.6724          
+##                  95% CI : (0.5791, 0.7567)
+##     No Information Rate : 0.5086          
+##     P-Value [Acc &gt; NIR] : 0.0002605       
+##                                           
+##                   Kappa : 0.345           
+##  Mcnemar&#39;s Test P-Value : 0.8711315       
+##                                           
+##             Sensitivity : 0.6610          
+##             Specificity : 0.6842          
+##          Pos Pred Value : 0.6842          
+##          Neg Pred Value : 0.6610          
+##              Prevalence : 0.5086          
+##          Detection Rate : 0.3362          
+##    Detection Prevalence : 0.4914          
+##       Balanced Accuracy : 0.6726          
+##                                           
+##        &#39;Positive&#39; Class : Treated         
+## </code></pre>
+</div>
+<div id="nbndvi" class="section level3">
+<h3>NBNDVI</h3>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##            Reference
+## Prediction  Treated Untreated
+##   Treated        44        31
+##   Untreated      15        26
+##                                           
+##                Accuracy : 0.6034          
+##                  95% CI : (0.5084, 0.6931)
+##     No Information Rate : 0.5086          
+##     P-Value [Acc &gt; NIR] : 0.02526         
+##                                           
+##                   Kappa : 0.2029          
+##  Mcnemar&#39;s Test P-Value : 0.02699         
+##                                           
+##             Sensitivity : 0.7458          
+##             Specificity : 0.4561          
+##          Pos Pred Value : 0.5867          
+##          Neg Pred Value : 0.6341          
+##              Prevalence : 0.5086          
+##          Detection Rate : 0.3793          
+##    Detection Prevalence : 0.6466          
+##       Balanced Accuracy : 0.6010          
+##                                           
+##        &#39;Positive&#39; Class : Treated         
+## </code></pre>
+</div>
+<div id="lmmr" class="section level3">
+<h3>LMMR</h3>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##            Reference
+## Prediction  Treated Untreated
+##   Treated        54         7
+##   Untreated       5        50
+##                                           
+##                Accuracy : 0.8966          
+##                  95% CI : (0.8263, 0.9454)
+##     No Information Rate : 0.5086          
+##     P-Value [Acc &gt; NIR] : &lt;2e-16          
+##                                           
+##                   Kappa : 0.7929          
+##  Mcnemar&#39;s Test P-Value : 0.7728          
+##                                           
+##             Sensitivity : 0.9153          
+##             Specificity : 0.8772          
+##          Pos Pred Value : 0.8852          
+##          Neg Pred Value : 0.9091          
+##              Prevalence : 0.5086          
+##          Detection Rate : 0.4655          
+##    Detection Prevalence : 0.5259          
+##       Balanced Accuracy : 0.8962          
+##                                           
+##        &#39;Positive&#39; Class : Treated         
+## </code></pre>
+</div>
+</div>
+<div id="visualize-spectra" class="section level2">
+<h2>Visualize spectra</h2>
+<p>Finally, we can visualize the spectral signature for each classification group (<Treated> and <Untreated>) and show the most important wavebands. First, we reformat our wide df into a long df (1). In a second step, we get the selected best bands (2) from a previous step and remove the X to have a numeric vector (3).</p>
+<pre class="r"><code>specdat &lt;- read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;, check.names = FALSE)
+spectra.gg &lt;- prep_gg(specdat) #1
+
+bands4gg &lt;-as.numeric(gsub(&#39;X&#39;, &#39;&#39;, best.bands)) #2, 3</code></pre>
+<p>Now we can plot the spectral signatures:</p>
+<p><img src="code_files/figure-html/specplot-1.png" width="1800" /></p>
+<p>We combine the last two plots, as shown in the article and save the plot:</p>
+<pre class="r"><code># C) Get bar/jitter plots from 7A and modify to combine with 7B
+
+p5 &lt;- plot_list[[2]]#MCARI
+p5 &lt;- p5+
+  theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p6 &lt;- plot_list[[3]]#NBNDVI
+p6 &lt;- p6+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p7 &lt;- plot_list[[4]]#LMMR
+p7 &lt;- p7+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank())
+
+p9 &lt;- plot_list[[1]]#PRI
+p9 &lt;- p9+
+    theme(#axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank())+
+      labs(x = &quot;PRI&quot;, y=&quot;Disease Prob.&quot;)
+  
+# D) Build Figure 2
+    
+plot.res &lt;- ggdraw() +
+    draw_plot(p9, x = 0, y = .5, width = .25, height = .5) +
+    draw_plot(p5, x = .25, y = .5, width = .25, height = .5) +
+    draw_plot(p6, x = .5, y = .5, width = .25, height = .5) +
+    draw_plot(p7, x = .75, y = .5, width = .25, height = .5) +
+      draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
+        draw_plot_label(label = c(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;), size = 12,
+                        x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
+
+ggsave(&quot;output/Figure2.boxspectra.png&quot;,
+    plot = plot.res,
+    width = 40,
+    height = 20,
+    units = &quot;cm&quot;,
+    dpi = 400
+  )</code></pre>
+</div>
 </div>
 
 <p>Copyright &copy; 2016 Skynet, Inc. All rights reserved.</p>
