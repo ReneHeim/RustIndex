@@ -7,7 +7,8 @@ margin-left:2px;
 margin-right:2px;
 margin-top: 20px;
 font-size: 19px;
-line-height: 1.6
+line-height: 1.6;
+text-align: justify
 }
 
 p {
@@ -29,18 +30,18 @@ h1, h2, h3,h4 {
   font-family: 'Oswald', sans-serif;
   padding-bottom: 10px;
   padding-top: 20px;
-  color: #4682b4;
+  color: #23A638;
  
 } 
  
 .navbar-default {
-    background-color: #006699
+    background-color: #23A638
 
 }
 .list-group-item.active {
     z-index: 2;
     color: #ffffff;
-    background-color: #006699;
-    border-color: #006699
+    background-color: #23A638;
+    border-color: #23A638
 }
 

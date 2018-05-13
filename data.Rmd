@@ -1,0 +1,16 @@
+% Data 
+
+## Raw data 
+
+In our previous study (Heim et al., 2018), leaf spectral data were collected on 
+a lemon myrtle (_Backhousia citriodora_) plantation in northern New South Wales, 
+Australia [28.6911090 S, 124 153.295480 E](https://goo.gl/maps/3zDQJfcQQf52), 
+and were organized in a single `csv` file. Data structure is as follows:
+
+```{r dat, echo=FALSE}
+head(ori.data[,1:5])
+```
+
+## Download 
+
+Data can be downloaded from project GitHub repository. ADD LINK

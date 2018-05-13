@@ -1,0 +1,49 @@
+% About
+
+<img src = "D:\\R\\RustIndex\\figs\\MyBlogLOGO.png" align= left width = 270 
+hspace= 50px> This research compendium contains the data and R codes to reproduce 
+the article REF HERE. The main objective was to design and test a new 
+disease-specific vegetation index to detect 
+[myrtle rust](http://www.pbcrc.com.au/news/2016/pbcrc/myrtle-rust-threat-australian-landscape-and-plant-industries) (_Austropuccinia psidii_) on lemon myrtle trees (_Backhousia citriodora_)
+using remote and near-range optical sensor systems. 
+
+## Citation
+
+> ADD HOW TO CITE HERE
+
+## Pre-print version
+
+> ADD LINK HERE  
+
+## Abstract
+
+Since 2010 Australian ecosystems and managed landscapes have been severely threatened by
+the invasive fungal pathogen, Austropuccinia psidii. Highly susceptible native species are
+already being locally extirpated. For the lemon myrtle industry, yield losses of up to 70 percent
+per year have been reported and have led to increased fungicide application and costs. Yet,
+detecting and monitoring disease outbreaks is currently only possible by human assessors,
+which is slow, labour intensive and depends on an assessor’s experience. Over the last 25
+years, spectral vegetation indices have been designed to assess variation in biochemical or
+biophysical traits of vegetation. Such indices provide an automatic and objective alternative to
+visual disease assessments by humans. However, diagnosis of individual diseases based on
+classical spectral vegetation indices is currently not possible since these indices lack disease
+specificity. To meet the needs of modern plant-disease detection, a new type of spectral indices
+must be developed. These indices should detect disease severity and incidence before
+symptoms become visible and discriminate between different pathogens, host-species and
+abiotic stresses. Here we develop a novel, spectral disease index, the lemon myrtle-myrtle rust
+index (LMMR). We show that the LMMR predicts infections caused by A. psidii on lemon myrtle
+(Backhousia citriodora) plantations with an overall accuracy of 90% for our dataset. We
+compare the LMMR classification accuracy to three classical spectral vegetation indices (PRI,
+MCARI, NBNDVI) used for stress detection, and show that the accuracies of these indices are
+all significantly lower (58%, 67%, 60%, respectively). If the LMMR can be validated on
+independent datasets from similar and different host-species, it could enable land managers to
+reduce costs by swiftly locating disease hotspots in their crop fields and applying fungicides in a
+targeted fashion. After validation, the LMMR could be transferred to hyperspectral data from
+different kinds of sensors, be applied on ground, aerial and satellite scales. We provide the
+analysis code in R to enable other researchers developing their own unique index.
+
+## Licences
+
+Data: [CC-0](https://creativecommons.org/publicdomain/zero/1.0/) attribution requested in reuse   
+Manuscript: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)  
+Code: [MIT](https://opensource.org/licenses/MIT) year: 2017, copyright holder: René Heim
