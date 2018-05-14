@@ -1,26 +1,11 @@
+%Code
+
 The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new 
 spectral disease index for the pathosystem _Austropuccinia psidii_ and 
-_Backhousia citriodora_. It utilizes a spectral dataset that was collected and 
-cleaned in a previous study and is structured as follows:
+_Backhousia citriodora_. It is structured according to the method section in our 
+current article (Heim et al., 2018):
 
-* Column 1: __Type__ is a categorical variables referring to the spectral 
-classes ("Healthy", "Treated" and "Untreated"). 
-
-* Column 2 and follwoing: __X505-X2500__ are the wavebands along the 
-electromagnetic spectrum and have been recorded, using a field spectrometer, in
-spectral reflectance [%].
-
-Please refer to our previous article (Heim et al., 2018a) for more information:
-
-Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, 
-E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust 
-(Austropuccinia psidii) on lemon myrtle trees using spectral signatures and 
-machine learning. Plant Pathol, 67: 1114-1121. [doi:10.1111/ppa.12830](https://doi:10.1111/ppa.12830)
-
-The following code is structured according to the Method section in our current 
-artice (Heim et al., 2018b):
-
-```{r , echo=FALSE, fig.cap="A caption", out.width = '80%'}
+```{r , echo=FALSE, fig.cap="A caption", out.width = '80%', dpi=500}
 knitr::include_graphics("figs/workflow.png")
 ```
 
@@ -31,16 +16,15 @@ knitr::include_graphics("figs/workflow.png")
 
 Please run the following code to install required R packages
 ```{r installpkgs, eval=FALSE}
-install.packages(c("cowplot", "gdata", "glmulti", "hsdar", "plyr",
-                   "PresenceAbsence", "prospectr", "rJava", 
-                   "tidyverse", "VSURF", "reshape2", "caret"))
+install.packages(c("cowplot", "gdata", "roxygen2","ggplot2", "glmulti", "hsdar",
+                    "rJava", "VSURF", "reshape2", "caret", "magrittr"))
 ```
 
 __Note:__ For the package _rJava_ it is necessary to set the path of the directory
 where Java is installed. Please install correct version of Java (32 or 64 bit) 
-before setting the path to the Java dir. For help pls follow this [LINK](https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r)
+before setting the path to the Java dir. For help follow this [LINK](https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r)
 
-For my machine I had to run:
+For my setup I had to run:
 ```{r setrjava, eval=FALSE}
 Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151')
 ```
@@ -48,7 +32,7 @@ Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151')
 Now we load the installed packages:
 ```{r loadpkgs, results='hide', message=FALSE, warning=FALSE}
 library(cowplot) #modify and save ggplot2 output
-library(gdata) #for DropClass function
+library(gdata) #for drop_class()
 library(roxygen2) #to read function documentation
 library(ggplot2) #plot spectra
 library(glmulti) #for model selection
@@ -60,7 +44,7 @@ library(caret) #classfication and regression
 library(magrittr) #build pipes
 ```
 
-Also the necessary functions: 
+Also the necessary functions, which can be download from the GitHub repository:
 ```{r loadfcts}
 source("R/FUN_drop_cat_var.R")
 source("R/FUN_exportVSURF.R")
@@ -81,7 +65,7 @@ The following chunk of code is loading the cleaned spectral data (1), is then
 checking how many factor levels are stored in the _Type_ column (2) and also 
 dropping the level <Healthy> (3). The column _Type_ is assigned to a single 
 object for later use (4). Then, the remaining factor levels are converted (5) 
-into a binary (1=<Untreated> and 0=<Treated>) to be readable by a logistic 
+into binary variables (1= Untreated and 0= Treated) to be used by a logistic 
 regression function. And finally, all reflectance values are log-transformed (6)
 to be able to design a ratio index in subsequent steps (__Note:__ log() is ln).
 ```{r data, results='hide'}
@@ -102,21 +86,21 @@ data[names(data)[-1]] <- log(data[names(data)[-1]]) #6
 
 The _VSURF_ package is used to conduct a pre-selection of important variables.
 This pre-selection was done as it reduced the total runtime of the analysis by 
-avoising a direct model selection procedure which would be more time consuming. 
-The _VSURF_ selection was repeated 10 times to account for random selection 
+avoiding a direct model selection procedure which would be more time consuming. 
+The _VSURF_ selection was repeated 10 times (1-2) to account for random selection 
 encounters (~ 30h runtime).
 ```{r vsurf, eval=FALSE}
 set.seed(20180111)
 
-feature.set <- list() # 1
-runs <- seq(1, 10, 1) # 2
+feature.set <- list()
+runs <- seq(1, 10, 1) # 1
 for (i in runs) {
   feature.set[[i]] <-
     VSURF(data[, 2:202], data[, 1],
       clusterType = "FORK", ntree = 2000,
       mtry = 50
     )
-} # 3
+} # 2
 
 saveRDS(feature.set, "data/features.rds") # 4
 ```
@@ -129,12 +113,12 @@ As we ran the _VSURF_ feature selection ten times, the container list (1) was
 filled with ten result object where each contains, amongst others, three vectors 
 of important variables. One vector (varselect.thres) contains a coarse set of 
 important features, another (varselect.interp) a refined set, and a third 
-contains a set of important features with no redundancy. Pls refer to __(CITE)__ 
-for more information on the differents sets. For our analysis, we want to find 
-the  unique wavebands among all ten selections. Therefore a result list was 
-created (2), we looped through each single object (3) to assign them to the 
-result list (band.vectors). This list was turned into a single object (4) and 
-all unique wavebands were selected (5).
+contains a set of important features with no redundancy (varselect.pred). 
+Pls refer to the _VSURF_ vignette for more information on the different sets. For 
+our analysis, we want to find the  unique wavebands among all ten selections. 
+Therefore a result list was created (2) and we looped through each single object 
+(3) to assign them to the result list (band.vectors). This list was turned into 
+a single object (4) and all unique wavebands were selected (5).
 ```{r extractbands}
 runs <- seq(1, length(feature.set), 1) # 1
 band.vectors <- list() # 2
@@ -153,11 +137,11 @@ model selection procedure using the package _glmulti_. We first set a seed (1)
 to avoid random number processing and reproduce our results and then run the 
 model selection (2) to find the four most important wavebands. As _glmulti_ does
 not provide model coefficients, another logistic regression was run (3) on the 
-_glmulti_ result to find coefficients for the model. We save (4) and reload (5)
+_glmulti_ result to find coefficients for the model. We saved (4) and reloaded (5)
 the final model to reproduce our results quicker when re-running the code.
 Eventually, the coefficients (6) and the most important wavebands (7) of the 
 final model were used to generate a linear function (8) that is most suitable to
-discriminate <Treated> and <Untreated> trees.
+discriminate treated and untreated trees.
 
 ```{r glmulti, eval=FALSE}
 set.seed(20180117) # 1
@@ -189,7 +173,7 @@ LMMR.model.eq <- "log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] 
 
 Based on the LMMR model we designed the LMMR index through mathematical 
 simplification. We initially log transformed the spectral reflectance to apply 
-Eq. 2 and 3 (Heim et al., 2018b). Additionally, to summarize the model 
+Eq. 2 and 3 (Heim et al., 2018). Additionally, to summarize the model 
 coefficients and yield 5/3 as a simplification, the absolute 95% confidence 
 intervals for coefficient pairs should overlap as this indicates products of 
 approximately equal magnitudes. Please refer to our article for the 
@@ -220,18 +204,22 @@ arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 # B
 
 ## Create spectral library
+
+Initially, we load a spectral dataset (1), then we drop the class "Healthy" (2)
+and use our custom-build function (3) to create a spectral library for the 
+_hsdar_ package.
 ```{r speclib}
 spectra <-
-  read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE) %>%
-  drop_class(., .$Type, "Healthy") %>%
-  raw2speclib(.)
+  read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE) %>% #1
+  drop_class(., .$Type, "Healthy") %>% #2
+  raw2speclib(.) #3
 ```
 
 ## Define spectral vegetation indices
 
-We use the _hsdar_ pkg to define spectral indices. The PRI and MCARI already 
-exist in the package and we add the NBNDVI (1) and the LMMR (2). We store them 
-all in a vector to process them that way (3).
+We used the _hsdar_ pkg to define spectral indices. The PRI and MCARI already 
+existed in the package and we added the NBNDVI (1) and the LMMR (2). We stored 
+them all in a vector to simplify processing (3).
 ```{r indices}
 NBNDVI <- '(R850-R680)/(R850+R680)' #1
 LMMR <- '((R545/R555)^(5/3))*(R1505/R2195)' #2
@@ -240,11 +228,11 @@ index <- c("PRI", "MCARI", NBNDVI, LMMR) #3
 
 ```
 
-After the indices have been defined we can use them to convert our spectral data
+After the indices were defined we can used them to convert our spectral data
 into index values by applying the indices on our spectral data (1-4). The LMMR 
 must be transformed to the log scale (4) as it was developed that way and to use
 a fair comparison. We yield a new dataset (5) that contains index values and we 
-add a column (6) containing the response (<Treated>, <Untreated>) for our 
+add a column (6) containing the response (Treated, Untreated) for our 
 classification.
 
 ```{r indexdata}
@@ -264,9 +252,11 @@ write.csv(index.df, "output/specindices.csv", row.names = FALSE)
 ## Classification
 
 First we split (1) our index dataset into training (2) and testing (3) to build 
-a logistic regression model (train) and validate this model on an isolated 
-sample (test). We also define classification parameters (4). For classification 
+a logistic regression model (train) and then validated this model on an isolated 
+sample (test). We also defined classification parameters (4). For classification 
 we used the _caret_ pkg. 
+
+Splitting data:
 ```{r splitdata}
 inTrain <- createDataPartition(y = index.df$Type, p = .75, list = FALSE) #1
 
@@ -279,6 +269,7 @@ ctrl <- trainControl(method = "boot",
                      savePredictions = TRUE) #4
 ```
 
+Creating training models:
 ```{r training, results='hide'}
 # PRI Training
 PRI.model <- train(Type ~ PRI, 
@@ -344,6 +335,7 @@ sink()
 
 ```
 
+Creating predictions (validation):
 ```{r testing, results='hide'}
 # PRI Testing
 PRI.pred <- predict(PRI.model, newdata = Test.25)
@@ -352,7 +344,7 @@ sink("output/PRITest25.txt", append=FALSE, split=FALSE)
 confusionMatrix(data = PRI.pred, Test.25$Type)
 sink()
 
-# MCARI Test
+# MCARI Testing
 MCARI.pred <- predict(MCARI.model, newdata = Test.25)
 
 sink("output/MCARITest25.txt", append=FALSE, split=FALSE)
@@ -360,7 +352,7 @@ confusionMatrix(data = MCARI.pred, Test.25$Type)
 sink()
 
 
-# NBNDVI Test
+# NBNDVI Testing
 NBNDVI.pred <- predict(NBNDVI.model, newdata = Test.25)
 
 sink("output/NBNDVITest25.txt", append=FALSE, split=FALSE)
@@ -368,7 +360,7 @@ confusionMatrix(data = NBNDVI.pred, Test.25$Type)
 sink()
 
 
-# LMMR Test
+# LMMR Testing
 LMMR.pred <- predict(LMMR.model, newdata = Test.25)
 
 sink("output/LMMRTest25.txt", append=FALSE, split=FALSE)
@@ -378,8 +370,8 @@ sink()
 
 ## Visualize classification training
 
-First we build a df using the fitted values of the training process for each 
-index (1-5) and add useful names for each column (6).
+First we built a df using the fitted values of the training process for each 
+index (1-5) and added useful names for each column (6).
 ```{r datatrain}
 
 
@@ -393,7 +385,7 @@ names(train.res.df) <- c('Type', 'PRI', 'MCARI', 'NBNDVI', 'LMMR') #6
   
 ```
 
-Then we can plot the results of the training process.
+Then we can plot the results of the training process.  
 ```{r plottrain, echo=FALSE}
 indi <- names(train.res.df[, 2:length(train.res.df)])
 plot_list <- list()
@@ -424,6 +416,8 @@ p1
 ```
 
 ## Model validation
+
+Below is the output of the model validation.
 
 ## {.tabset}
 ### PRI 
@@ -456,9 +450,9 @@ confmat.LMMR
 
 ## Visualize spectra
 
-Finally, we can visualize the spectral signature for each classification group
-(<Treated> and <Untreated>) and show the most important wavebands. First, we 
-reformat our wide df into a long df (1). In a second step, we get the selected 
+Finally, we visualized the spectral signature for each classification group
+(Treated and Untreated) and showed the most important wavebands. First, we 
+reformated our wide df into a long df (1). In a second step, we get the selected 
 best bands (2) from a previous step and remove the X to have a numeric vector (3).
 ```{r wide2long}
 specdat <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
@@ -467,7 +461,7 @@ spectra.gg <- prep_gg(specdat) #1
 bands4gg <-as.numeric(gsub('X', '', best.bands)) #2, 3
 ```
     
-Now we can plot the spectral signatures:
+Now we can plot spectral signatures:
 ```{r plotspec, echo=FALSE}
 pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
   geom_line(aes(linetype=Type), size = 1)+
@@ -565,7 +559,7 @@ pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
 pspec
 ```
 
-We combine the last two plots, as shown in the article and save the plot:
+Finally, we combined the last two plots, as shown in the article, and saved the plot:
 ```{r saveplot, results='hide'}
 
 # C) Get bar/jitter plots from 7A and modify to combine with 7B
