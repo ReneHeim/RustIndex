@@ -33,21 +33,27 @@
 
 # Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir.
 
+library(caret)
 library(cowplot)
+
+library(devtools)
+
 library(gdata)
+library(ggplot2)
 library(glmulti)
+
 library(hsdar)
+
+library(magrittr)
+
 library(plyr)
 library(PresenceAbsence)
 library(prospectr)
-library(rJava)
-library(ggplot2)
-library(VSURF)
-library(reshape2)
-library(caret)
-library(devtools)
-library(magrittr)
 
+library(rJava)
+library(reshape2)
+
+library(VSURF)
 
 # 2. Loading Functions and set project structure-----------------------------------------------------
 
@@ -68,7 +74,7 @@ ori.data <- read.csv('data/data.wo.out.binned.cut.csv') #Get original data
 
 levels(ori.data$Type) #Check levels of categorical response 
 
-data <- DropClass(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
+data <- drop_class(ori.data, ori.data$Type, 'Healthy') #Drop factor level 'Healthy'
 
 Type <- data$Type # Exract for later use
 
@@ -105,7 +111,7 @@ runs <- seq(1,length(feature.set),1) # Create sequence depending on length of fe
 band.vectors <- list() # Create output object
 
 for(i in runs){
-  band.vectors[[i]] <- export.VSURF(feature.set[[i]]$varselect.pred, data[, 2:202])
+  band.vectors[[i]] <- export_vsurf(feature.set[[i]]$varselect.pred, data[, 2:202])
 } # export.VSURF turns list of column numbers into list of according wavebands
 
 VSURF.selection <- unlist(band.vectors) #Unlist list to create a vector containing all selected bands
@@ -166,7 +172,7 @@ arrows(x,ci[,1],x,ci[,2], code=3, angle=90, length=0.05)
 
 tospectra <- read.csv("data/data.wo.out.binned.cut.csv", check.names = FALSE)
 
-tospectra <- DropClass(tospectra, tospectra$Type, "Healthy")
+tospectra <- drop_class(tospectra, tospectra$Type, "Healthy")
 
 spectra <- raw2speclib(tospectra) # Use hsdar to build spectral library
 
@@ -297,7 +303,7 @@ p1
 
 # B) Plot spectra and show final most important wavebands
     
-spectra.gg <- prep.gg(tospectra) # Transforms wide to long for ggplot2 readibility
+spectra.gg <- prep_gg(tospectra) # Transforms wide to long for ggplot2 readibility
   
 # Subplot E (Spectra including spectral regions and best bands)
 

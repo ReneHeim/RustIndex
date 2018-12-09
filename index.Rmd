@@ -1,6 +1,6 @@
 % About
 
-<img src = "D:\\R\\RustIndex\\figs\\MyBlogLOGO.png" align= left width = 270 
+<img src = "C:\\Users\\rene\\Dropbox\\Work\\PhD\\Projects\\02_RustIndex\\RustIndex\\figs\\MyBlogLOGO.png" align= left width = 270 
 hspace= 50px> This research compendium contains the data and R codes to reproduce 
 the article REF HERE. The main objective was to design and test a new 
 disease-specific vegetation index to detect 

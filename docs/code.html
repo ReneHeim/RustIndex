@@ -326,35 +326,51 @@ div.tocify {
 </div>
 
 
-<p>The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new spectral disease index for the pathosystem <em>Austropuccinia psidii</em> and <em>Backhousia citriodora</em>. It is structured according to the method section in our current article (Heim et al., 2018):</p>
-<div class="figure">
-<img src="figs/workflow.png" alt="A caption" width="80%" />
-<p class="caption">
-A caption
-</p>
-</div>
+<p>The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new spectral disease index for the pathosystem <em>Austropuccinia psidii</em> and <em>Backhousia citriodora</em>.</p>
 <div id="setup-coding-environment" class="section level1">
 <h1>Setup coding environment</h1>
 <div id="install-and-load-packages" class="section level2">
 <h2>Install and load packages</h2>
 <p>Please run the following code to install required R packages</p>
-<pre class="r"><code>install.packages(c(&quot;cowplot&quot;, &quot;gdata&quot;, &quot;roxygen2&quot;,&quot;ggplot2&quot;, &quot;glmulti&quot;, &quot;hsdar&quot;,
-                    &quot;rJava&quot;, &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;, &quot;magrittr&quot;))</code></pre>
+<pre class="r"><code>install.packages(c(&quot;caret&quot;,
+                   &quot;cowplot&quot;,
+                   &quot;devtools&quot;,
+                   &quot;gdata&quot;, 
+                   &quot;ggplot2&quot;, 
+                   &quot;glmulti&quot;,
+                   &quot;hsdar&quot;, 
+                   &quot;magrittr&quot;, 
+                   &quot;plyr&quot;, 
+                   &quot;PresenceAbsence&quot;, 
+                   &quot;prospectr&quot;, 
+                   &quot;rJava&quot;, 
+                   &quot;reshape2&quot;,
+                   &quot;VSURF&quot;))</code></pre>
 <p><strong>Note:</strong> For the package <em>rJava</em> it is necessary to set the path of the directory where Java is installed. Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir. For help follow this <a href="https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r">LINK</a></p>
 <p>For my setup I had to run:</p>
 <pre class="r"><code>Sys.setenv(JAVA_HOME=&#39;C:\\Program Files\\Java\\jre1.8.0_151&#39;)</code></pre>
 <p>Now we load the installed packages:</p>
-<pre class="r"><code>library(cowplot) #modify and save ggplot2 output
-library(gdata) #for drop_class()
-library(roxygen2) #to read function documentation
-library(ggplot2) #plot spectra
-library(glmulti) #for model selection
-library(hsdar) #build spectral library
-library(rJava) #required to run glmulti
-library(VSURF) # random forest based feature selection
-library(reshape2) #wide to long reformat
-library(caret) #classfication and regression 
-library(magrittr) #build pipes</code></pre>
+<pre class="r"><code>library(caret)
+library(cowplot)
+
+library(devtools)
+
+library(gdata)
+library(ggplot2)
+library(glmulti)
+
+library(hsdar)
+
+library(magrittr)
+
+library(plyr)
+library(PresenceAbsence)
+library(prospectr)
+
+library(rJava)
+library(reshape2)
+
+library(VSURF)</code></pre>
 <p>Also the necessary functions, which can be download from the GitHub repository:</p>
 <pre class="r"><code>source(&quot;R/FUN_drop_cat_var.R&quot;)
 source(&quot;R/FUN_exportVSURF.R&quot;)

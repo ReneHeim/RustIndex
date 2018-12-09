@@ -2,13 +2,7 @@
 
 The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new 
 spectral disease index for the pathosystem _Austropuccinia psidii_ and 
-_Backhousia citriodora_. It is structured according to the method section in our 
-current article (Heim et al., 2018):
-
-```{r , echo=FALSE, fig.cap="A caption", out.width = '80%', dpi=500}
-knitr::include_graphics("figs/workflow.png")
-```
-
+_Backhousia citriodora_.
 
 # Setup coding environment
 
@@ -16,8 +10,20 @@ knitr::include_graphics("figs/workflow.png")
 
 Please run the following code to install required R packages
 ```{r installpkgs, eval=FALSE}
-install.packages(c("cowplot", "gdata", "roxygen2","ggplot2", "glmulti", "hsdar",
-                    "rJava", "VSURF", "reshape2", "caret", "magrittr"))
+install.packages(c("caret",
+                   "cowplot",
+                   "devtools",
+                   "gdata", 
+                   "ggplot2", 
+                   "glmulti",
+                   "hsdar", 
+                   "magrittr", 
+                   "plyr", 
+                   "PresenceAbsence", 
+                   "prospectr", 
+                   "rJava", 
+                   "reshape2",
+                   "VSURF"))
 ```
 
 __Note:__ For the package _rJava_ it is necessary to set the path of the directory
@@ -31,17 +37,27 @@ Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre1.8.0_151')
 
 Now we load the installed packages:
 ```{r loadpkgs, results='hide', message=FALSE, warning=FALSE}
-library(cowplot) #modify and save ggplot2 output
-library(gdata) #for drop_class()
-library(roxygen2) #to read function documentation
-library(ggplot2) #plot spectra
-library(glmulti) #for model selection
-library(hsdar) #build spectral library
-library(rJava) #required to run glmulti
-library(VSURF) # random forest based feature selection
-library(reshape2) #wide to long reformat
-library(caret) #classfication and regression 
-library(magrittr) #build pipes
+library(caret)
+library(cowplot)
+
+library(devtools)
+
+library(gdata)
+library(ggplot2)
+library(glmulti)
+
+library(hsdar)
+
+library(magrittr)
+
+library(plyr)
+library(PresenceAbsence)
+library(prospectr)
+
+library(rJava)
+library(reshape2)
+
+library(VSURF)
 ```
 
 Also the necessary functions, which can be download from the GitHub repository:
