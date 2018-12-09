@@ -11,7 +11,7 @@
 
 
 
-<title></title>
+<title>Code</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -316,18 +316,12 @@ div.tocify {
 
 
 
+<h1 class="title toc-ignore">Code</h1>
 
 </div>
 
 
-<p>The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new spectral disease index for the pathosystem <em>Austropuccinia psidii</em> and <em>Backhousia citriodora</em>. It utilizes a spectral dataset that was collected and cleaned in a previous study and is structured as follows:</p>
-<ul>
-<li><p>Column 1: <strong>Type</strong> is a categorical variables referring to the spectral classes (“Healthy”, “Treated” and “Untreated”).</p></li>
-<li><p>Column 2 and follwoing: <strong>X505-X2500</strong> are the wavebands along the electromagnetic spectrum and have been recorded, using a field spectrometer, in spectral reflectance [%].</p></li>
-</ul>
-<p>Please refer to our previous article (Heim et al., 2018a) for more information:</p>
-<p>Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust (Austropuccinia psidii) on lemon myrtle trees using spectral signatures and machine learning. Plant Pathol, 67: 1114-1121. <a href="https://doi:10.1111/ppa.12830">doi:10.1111/ppa.12830</a></p>
-<p>The following code is structured according to the Method section in our current artice (Heim et al., 2018b):</p>
+<p>The following code generates the LMMR index (LemonMyrtle-MyrtleRust), a new spectral disease index for the pathosystem <em>Austropuccinia psidii</em> and <em>Backhousia citriodora</em>. It is structured according to the method section in our current article (Heim et al., 2018):</p>
 <div class="figure">
 <img src="figs/workflow.png" alt="A caption" width="80%" />
 <p class="caption">
@@ -339,15 +333,14 @@ A caption
 <div id="install-and-load-packages" class="section level2">
 <h2>Install and load packages</h2>
 <p>Please run the following code to install required R packages</p>
-<pre class="r"><code>install.packages(c(&quot;cowplot&quot;, &quot;gdata&quot;, &quot;glmulti&quot;, &quot;hsdar&quot;, &quot;plyr&quot;,
-                   &quot;PresenceAbsence&quot;, &quot;prospectr&quot;, &quot;rJava&quot;, 
-                   &quot;tidyverse&quot;, &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;))</code></pre>
-<p><strong>Note:</strong> For the package <em>rJava</em> it is necessary to set the path of the directory where Java is installed. Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir. For help pls follow this <a href="https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r">LINK</a></p>
-<p>For my machine I had to run:</p>
+<pre class="r"><code>install.packages(c(&quot;cowplot&quot;, &quot;gdata&quot;, &quot;roxygen2&quot;,&quot;ggplot2&quot;, &quot;glmulti&quot;, &quot;hsdar&quot;,
+                    &quot;rJava&quot;, &quot;VSURF&quot;, &quot;reshape2&quot;, &quot;caret&quot;, &quot;magrittr&quot;))</code></pre>
+<p><strong>Note:</strong> For the package <em>rJava</em> it is necessary to set the path of the directory where Java is installed. Please install correct version of Java (32 or 64 bit) before setting the path to the Java dir. For help follow this <a href="https://stackoverflow.com/questions/27661325/unable-to-load-rjava-on-r">LINK</a></p>
+<p>For my setup I had to run:</p>
 <pre class="r"><code>Sys.setenv(JAVA_HOME=&#39;C:\\Program Files\\Java\\jre1.8.0_151&#39;)</code></pre>
 <p>Now we load the installed packages:</p>
 <pre class="r"><code>library(cowplot) #modify and save ggplot2 output
-library(gdata) #for DropClass function
+library(gdata) #for drop_class()
 library(roxygen2) #to read function documentation
 library(ggplot2) #plot spectra
 library(glmulti) #for model selection
@@ -357,7 +350,7 @@ library(VSURF) # random forest based feature selection
 library(reshape2) #wide to long reformat
 library(caret) #classfication and regression 
 library(magrittr) #build pipes</code></pre>
-<p>Also the necessary functions:</p>
+<p>Also the necessary functions, which can be download from the GitHub repository:</p>
 <pre class="r"><code>source(&quot;R/FUN_drop_cat_var.R&quot;)
 source(&quot;R/FUN_exportVSURF.R&quot;)
 source(&quot;R/FUN_raw2speclibhsdar.R&quot;)
@@ -370,7 +363,7 @@ source(&quot;R/FUN_prepggwide2long.R&quot;)</code></pre>
 <h1>A</h1>
 <div id="loading-and-preparing-data" class="section level2">
 <h2>Loading and preparing data</h2>
-<p>The following chunk of code is loading the cleaned spectral data (1), is then checking how many factor levels are stored in the <em>Type</em> column (2) and also dropping the level <Healthy> (3). The column <em>Type</em> is assigned to a single object for later use (4). Then, the remaining factor levels are converted (5) into a binary (1=<Untreated> and 0=<Treated>) to be readable by a logistic regression function. And finally, all reflectance values are log-transformed (6) to be able to design a ratio index in subsequent steps (<strong>Note:</strong> log() is ln).</p>
+<p>The following chunk of code is loading the cleaned spectral data (1), is then checking how many factor levels are stored in the <em>Type</em> column (2) and also dropping the level <Healthy> (3). The column <em>Type</em> is assigned to a single object for later use (4). Then, the remaining factor levels are converted (5) into binary variables (1= Untreated and 0= Treated) to be used by a logistic regression function. And finally, all reflectance values are log-transformed (6) to be able to design a ratio index in subsequent steps (<strong>Note:</strong> log() is ln).</p>
 <pre class="r"><code>ori.data &lt;- read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;) #1
 
 levels(ori.data$Type) #2
@@ -385,22 +378,22 @@ data[names(data)[-1]] &lt;- log(data[names(data)[-1]]) #6</code></pre>
 </div>
 <div id="feature-selection" class="section level2">
 <h2>Feature selection</h2>
-<p>The <em>VSURF</em> package is used to conduct a pre-selection of important variables. This pre-selection was done as it reduced the total runtime of the analysis by avoising a direct model selection procedure which would be more time consuming. The <em>VSURF</em> selection was repeated 10 times to account for random selection encounters (~ 30h runtime).</p>
+<p>The <em>VSURF</em> package is used to conduct a pre-selection of important variables. This pre-selection was done as it reduced the total runtime of the analysis by avoiding a direct model selection procedure which would be more time consuming. The <em>VSURF</em> selection was repeated 10 times (1-2) to account for random selection encounters (~ 30h runtime).</p>
 <pre class="r"><code>set.seed(20180111)
 
-feature.set &lt;- list() # 1
-runs &lt;- seq(1, 10, 1) # 2
+feature.set &lt;- list()
+runs &lt;- seq(1, 10, 1) # 1
 for (i in runs) {
   feature.set[[i]] &lt;-
     VSURF(data[, 2:202], data[, 1],
       clusterType = &quot;FORK&quot;, ntree = 2000,
       mtry = 50
     )
-} # 3
+} # 2
 
 saveRDS(feature.set, &quot;data/features.rds&quot;) # 4</code></pre>
 <pre class="r"><code>feature.set &lt;- readRDS(&quot;data/features.rds&quot;) #5</code></pre>
-<p>As we ran the <em>VSURF</em> feature selection ten times, the container list (1) was filled with ten result object where each contains, amongst others, three vectors of important variables. One vector (varselect.thres) contains a coarse set of important features, another (varselect.interp) a refined set, and a third contains a set of important features with no redundancy. Pls refer to <strong>(CITE)</strong> for more information on the differents sets. For our analysis, we want to find the unique wavebands among all ten selections. Therefore a result list was created (2), we looped through each single object (3) to assign them to the result list (band.vectors). This list was turned into a single object (4) and all unique wavebands were selected (5).</p>
+<p>As we ran the <em>VSURF</em> feature selection ten times, the container list (1) was filled with ten result object where each contains, amongst others, three vectors of important variables. One vector (varselect.thres) contains a coarse set of important features, another (varselect.interp) a refined set, and a third contains a set of important features with no redundancy (varselect.pred). Pls refer to the <em>VSURF</em> vignette for more information on the different sets. For our analysis, we want to find the unique wavebands among all ten selections. Therefore a result list was created (2) and we looped through each single object (3) to assign them to the result list (band.vectors). This list was turned into a single object (4) and all unique wavebands were selected (5).</p>
 <pre class="r"><code>runs &lt;- seq(1, length(feature.set), 1) # 1
 band.vectors &lt;- list() # 2
 
@@ -411,7 +404,7 @@ for (i in runs) {
 
 VSURF.selection &lt;- unlist(band.vectors) # 4
 VSURF.selection &lt;- sort(unique(VSURF.selection)) # 5</code></pre>
-<p>The 27 unique, most important wavebands could be used as input for an exhaustive model selection procedure using the package <em>glmulti</em>. We first set a seed (1) to avoid random number processing and reproduce our results and then run the model selection (2) to find the four most important wavebands. As <em>glmulti</em> does not provide model coefficients, another logistic regression was run (3) on the <em>glmulti</em> result to find coefficients for the model. We save (4) and reload (5) the final model to reproduce our results quicker when re-running the code. Eventually, the coefficients (6) and the most important wavebands (7) of the final model were used to generate a linear function (8) that is most suitable to discriminate <Treated> and <Untreated> trees.</p>
+<p>The 27 unique, most important wavebands could be used as input for an exhaustive model selection procedure using the package <em>glmulti</em>. We first set a seed (1) to avoid random number processing and reproduce our results and then run the model selection (2) to find the four most important wavebands. As <em>glmulti</em> does not provide model coefficients, another logistic regression was run (3) on the <em>glmulti</em> result to find coefficients for the model. We saved (4) and reloaded (5) the final model to reproduce our results quicker when re-running the code. Eventually, the coefficients (6) and the most important wavebands (7) of the final model were used to generate a linear function (8) that is most suitable to discriminate treated and untreated trees.</p>
 <pre class="r"><code>set.seed(20180117) # 1
 
 multi.model &lt;- glmulti(y = names(data)[1],
@@ -432,7 +425,7 @@ saveRDS(model.1, &quot;output/LMMRmodel.RDS&quot;) # 4</code></pre>
 <pre class="r"><code>best.bands &lt;- row.names(summary(model.1)$coefficients)[c(2, 3, 4, 5)] # 7
 
 LMMR.model.eq &lt;- &quot;log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 log[R555] + 45.993 log[R1505] - 46.831 log[R2195]&quot; # 8</code></pre>
-<p>Based on the LMMR model we designed the LMMR index through mathematical simplification. We initially log transformed the spectral reflectance to apply Eq. 2 and 3 (Heim et al., 2018b). Additionally, to summarize the model coefficients and yield 5/3 as a simplification, the absolute 95% confidence intervals for coefficient pairs should overlap as this indicates products of approximately equal magnitudes. Please refer to our article for the required steps yielding the LMMR.</p>
+<p>Based on the LMMR model we designed the LMMR index through mathematical simplification. We initially log transformed the spectral reflectance to apply Eq. 2 and 3 (Heim et al., 2018). Additionally, to summarize the model coefficients and yield 5/3 as a simplification, the absolute 95% confidence intervals for coefficient pairs should overlap as this indicates products of approximately equal magnitudes. Please refer to our article for the required steps yielding the LMMR.</p>
 <pre class="r"><code>confint(model.1)</code></pre>
 <pre><code>##                  2.5 %    97.5 %
 ## (Intercept)   9.964532  27.46334
@@ -447,19 +440,20 @@ LMMR.model.eq &lt;- &quot;log[P/(1 - P)] = 18.387 + 75.382 log[R545] - 78.809 lo
 <h1>B</h1>
 <div id="create-spectral-library" class="section level2">
 <h2>Create spectral library</h2>
+<p>Initially, we load a spectral dataset (1), then we drop the class “Healthy” (2) and use our custom-build function (3) to create a spectral library for the <em>hsdar</em> package.</p>
 <pre class="r"><code>spectra &lt;-
-  read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;, check.names = FALSE) %&gt;%
-  drop_class(., .$Type, &quot;Healthy&quot;) %&gt;%
-  raw2speclib(.)</code></pre>
+  read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;, check.names = FALSE) %&gt;% #1
+  drop_class(., .$Type, &quot;Healthy&quot;) %&gt;% #2
+  raw2speclib(.) #3</code></pre>
 </div>
 <div id="define-spectral-vegetation-indices" class="section level2">
 <h2>Define spectral vegetation indices</h2>
-<p>We use the <em>hsdar</em> pkg to define spectral indices. The PRI and MCARI already exist in the package and we add the NBNDVI (1) and the LMMR (2). We store them all in a vector to process them that way (3).</p>
+<p>We used the <em>hsdar</em> pkg to define spectral indices. The PRI and MCARI already existed in the package and we added the NBNDVI (1) and the LMMR (2). We stored them all in a vector to simplify processing (3).</p>
 <pre class="r"><code>NBNDVI &lt;- &#39;(R850-R680)/(R850+R680)&#39; #1
 LMMR &lt;- &#39;((R545/R555)^(5/3))*(R1505/R2195)&#39; #2
 
 index &lt;- c(&quot;PRI&quot;, &quot;MCARI&quot;, NBNDVI, LMMR) #3</code></pre>
-<p>After the indices have been defined we can use them to convert our spectral data into index values by applying the indices on our spectral data (1-4). The LMMR must be transformed to the log scale (4) as it was developed that way and to use a fair comparison. We yield a new dataset (5) that contains index values and we add a column (6) containing the response (<Treated>, <Untreated>) for our classification.</p>
+<p>After the indices were defined we can used them to convert our spectral data into index values by applying the indices on our spectral data (1-4). The LMMR must be transformed to the log scale (4) as it was developed that way and to use a fair comparison. We yield a new dataset (5) that contains index values and we add a column (6) containing the response (Treated, Untreated) for our classification.</p>
 <pre class="r"><code>index.list &lt;- list()
 
 index.list[[&#39;PRI&#39;]] &lt;- vegindex(spectra, index[1]) #1
@@ -474,7 +468,8 @@ write.csv(index.df, &quot;output/specindices.csv&quot;, row.names = FALSE)</code
 </div>
 <div id="classification" class="section level2">
 <h2>Classification</h2>
-<p>First we split (1) our index dataset into training (2) and testing (3) to build a logistic regression model (train) and validate this model on an isolated sample (test). We also define classification parameters (4). For classification we used the <em>caret</em> pkg.</p>
+<p>First we split (1) our index dataset into training (2) and testing (3) to build a logistic regression model (train) and then validated this model on an isolated sample (test). We also defined classification parameters (4). For classification we used the <em>caret</em> pkg.</p>
+<p>Splitting data:</p>
 <pre class="r"><code>inTrain &lt;- createDataPartition(y = index.df$Type, p = .75, list = FALSE) #1
 
 Train.75 &lt;- index.df[inTrain,] #2
@@ -484,6 +479,7 @@ ctrl &lt;- trainControl(method = &quot;boot&quot;,
                      number = 1000, 
                      classProbs = FALSE, 
                      savePredictions = TRUE) #4</code></pre>
+<p>Creating training models:</p>
 <pre class="r"><code># PRI Training
 PRI.model &lt;- train(Type ~ PRI, 
                    data = Train.75, 
@@ -545,6 +541,7 @@ LMMR.model$pred
 summary(LMMR.model)
 confusionMatrix(LMMR.model)
 sink()</code></pre>
+<p>Creating predictions (validation):</p>
 <pre class="r"><code># PRI Testing
 PRI.pred &lt;- predict(PRI.model, newdata = Test.25)
 
@@ -552,7 +549,7 @@ sink(&quot;output/PRITest25.txt&quot;, append=FALSE, split=FALSE)
 confusionMatrix(data = PRI.pred, Test.25$Type)
 sink()
 
-# MCARI Test
+# MCARI Testing
 MCARI.pred &lt;- predict(MCARI.model, newdata = Test.25)
 
 sink(&quot;output/MCARITest25.txt&quot;, append=FALSE, split=FALSE)
@@ -560,7 +557,7 @@ confusionMatrix(data = MCARI.pred, Test.25$Type)
 sink()
 
 
-# NBNDVI Test
+# NBNDVI Testing
 NBNDVI.pred &lt;- predict(NBNDVI.model, newdata = Test.25)
 
 sink(&quot;output/NBNDVITest25.txt&quot;, append=FALSE, split=FALSE)
@@ -568,7 +565,7 @@ confusionMatrix(data = NBNDVI.pred, Test.25$Type)
 sink()
 
 
-# LMMR Test
+# LMMR Testing
 LMMR.pred &lt;- predict(LMMR.model, newdata = Test.25)
 
 sink(&quot;output/LMMRTest25.txt&quot;, append=FALSE, split=FALSE)
@@ -577,7 +574,7 @@ sink()</code></pre>
 </div>
 <div id="visualize-classification-training" class="section level2">
 <h2>Visualize classification training</h2>
-<p>First we build a df using the fitted values of the training process for each index (1-5) and add useful names for each column (6).</p>
+<p>First we built a df using the fitted values of the training process for each index (1-5) and added useful names for each column (6).</p>
 <pre class="r"><code>train.res.df &lt;- as.data.frame(Train.75$Type) #1
 train.res.df$PRIval &lt;- PRIvalues #2
 train.res.df$MCARIval &lt;- MCARIvalues #3
@@ -585,10 +582,12 @@ train.res.df$NBNDVIval &lt;- NBNDVIvalues #4
 train.res.df$LMMRval &lt;- LMMRvalues #5
 
 names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39;NBNDVI&#39;, &#39;LMMR&#39;) #6</code></pre>
-<p>Then we can plot the results of the training process. <img src="code_files/figure-html/plottrain-1.png" width="672" /></p>
+<p>Then we can plot the results of the training process.<br />
+<img src="code_files/figure-html/plottrain-1.png" width="672" /></p>
 </div>
 <div id="model-validation" class="section level2">
 <h2>Model validation</h2>
+<p>Below is the output of the model validation.</p>
 </div>
 <div id="section" class="section level2 tabset">
 <h2></h2>
@@ -711,14 +710,14 @@ names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39
 </div>
 <div id="visualize-spectra" class="section level2">
 <h2>Visualize spectra</h2>
-<p>Finally, we can visualize the spectral signature for each classification group (<Treated> and <Untreated>) and show the most important wavebands. First, we reformat our wide df into a long df (1). In a second step, we get the selected best bands (2) from a previous step and remove the X to have a numeric vector (3).</p>
+<p>Finally, we visualized the spectral signature for each classification group (Treated and Untreated) and showed the most important wavebands. First, we reformated our wide df into a long df (1). In a second step, we get the selected best bands (2) from a previous step and remove the X to have a numeric vector (3).</p>
 <pre class="r"><code>specdat &lt;- read.csv(&quot;data/data.wo.out.binned.cut.csv&quot;, check.names = FALSE)
 spectra.gg &lt;- prep_gg(specdat) #1
 
 bands4gg &lt;-as.numeric(gsub(&#39;X&#39;, &#39;&#39;, best.bands)) #2, 3</code></pre>
-<p>Now we can plot the spectral signatures:</p>
+<p>Now we can plot spectral signatures:</p>
 <p><img src="code_files/figure-html/specplot-1.png" width="1800" /></p>
-<p>We combine the last two plots, as shown in the article and save the plot:</p>
+<p>Finally, we combined the last two plots, as shown in the article, and saved the plot:</p>
 <pre class="r"><code># C) Get bar/jitter plots from 7A and modify to combine with 7B
 
 p5 &lt;- plot_list[[2]]#MCARI

@@ -323,14 +323,27 @@ div.tocify {
 
 <div id="raw-data" class="section level2">
 <h2>Raw data</h2>
-<p>In our previous study (Heim et al., 2018), leaf spectral data were collected on a lemon myrtle (<em>Backhousia citriodora</em>) plantation in northern New South Wales, Australia <a href="https://goo.gl/maps/3zDQJfcQQf52">28.6911090 S, 124 153.295480 E</a>, and were organized in a single <code>csv</code> file. Data structure is as follows:</p>
-<pre><code>##      Type    X505    X515    X525     X535
-## 1 Healthy 6.24695 7.47541 8.76196  9.60083
-## 2 Healthy 6.02445 7.13753 8.42296  9.31252
-## 3 Healthy 3.74299 4.63272 6.33524  8.56322
-## 4 Healthy 5.18315 6.23946 8.53988 11.24664
-## 5 Healthy 4.32373 5.43988 6.51496  7.16402
-## 6 Healthy 6.27764 7.34788 8.36860  8.99552</code></pre>
+<p>In our previous study (Heim et al., 2018), leaf spectral data was collected on a lemon myrtle (<em>Backhousia citriodora</em>) plantation in northern New South Wales, Australia <a href="https://goo.gl/maps/3zDQJfcQQf52">28.6911090 S, 124 153.295480 E</a>, and were organized in a single <code>csv</code> file.</p>
+<ul>
+<li><p>Column 1: <strong>Type</strong> is a categorical variables referring to the spectral classes (“Healthy”, “Treated” and “Untreated”).</p></li>
+<li><p>Column 2 and follwoing: <strong>X505-X2500</strong> are the wavebands along the electromagnetic spectrum and have been recorded, using a field spectrometer, in spectral reflectance [%].</p></li>
+</ul>
+<pre><code>##      Type    X505    X515    X525     X535     X545     X555     X565
+## 1 Healthy 6.24695 7.47541 8.76196  9.60083 10.41397 11.52191 12.96581
+## 2 Healthy 6.02445 7.13753 8.42296  9.31252 10.17494 11.21573 12.56159
+## 3 Healthy 3.74299 4.63272 6.33524  8.56322 10.76416 12.29122 12.07371
+## 4 Healthy 5.18315 6.23946 8.53988 11.24664 13.43128 14.70756 14.08224
+## 5 Healthy 4.32373 5.43988 6.51496  7.16402  7.80067  8.78375 10.21582
+## 6 Healthy 6.27764 7.34788 8.36860  8.99552  9.74910 10.76764 12.21082
+##       X575
+## 1 14.42017
+## 2 13.84469
+## 3 10.57803
+## 4 12.16332
+## 5 11.78936
+## 6 13.92898</code></pre>
+<p>Please refer to our previous article (Heim et al., 2018a) for more information:</p>
+<p>Heim, R. H., Wright, I. J., Chang, H. , Carnegie, A. J., Pegg, G. S., Lancaster, E. K., Falster, D. S. and Oldeland, J. (2018), Detecting myrtle rust (Austropuccinia psidii) on lemon myrtle trees using spectral signatures and machine learning. Plant Pathol, 67: 1114-1121. <a href="https://doi:10.1111/ppa.12830">doi:10.1111/ppa.12830</a></p>
 </div>
 <div id="download" class="section level2">
 <h2>Download</h2>
