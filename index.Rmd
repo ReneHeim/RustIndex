@@ -9,11 +9,11 @@ using remote and near-range optical sensor systems.
 
 ## Citation
 
-> ADD HOW TO CITE HERE
+> Heim, RHJ; Wright, IJ; Allen, AP; Geedicke, I and Oldeland, J. (2018) Developing a spectral disease index for myrtle rust (*Austropuccinia psidii*), *Plant Pathology*, XX(xx), pp. XXX. doi: XXX.
 
 ## Pre-print version
 
-> ADD LINK HERE  
+> not available  
 
 ## Abstract
 

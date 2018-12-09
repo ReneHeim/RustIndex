@@ -27,4 +27,4 @@ machine learning. Plant Pathol, 67: 1114-1121. [doi:10.1111/ppa.12830](https://d
 
 ## Download 
 
-Data can be downloaded from project GitHub repository. ADD LINK
+Data can be downloaded from project [GitHub repository](https://github.com/ReneHeim/RustIndex/tree/master/data)
