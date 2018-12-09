@@ -25,7 +25,9 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
-<link href="site_libs/font-awesome-4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.0.13/css/fa-svg-with-js.css" rel="stylesheet" />
+<script src="site_libs/font-awesome-5.0.13/js/fontawesome-all.min.js"></script>
+<script src="site_libs/font-awesome-5.0.13/js/fa-v4-shims.min.js"></script>
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
@@ -94,6 +96,9 @@ img {
 }
 .tabbed-pane {
   padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
 }
 button.code-folding-btn:focus {
   outline: none;
@@ -597,25 +602,25 @@ names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39
 ## 
 ##            Reference
 ## Prediction  Treated Untreated
-##   Treated        37        27
-##   Untreated      22        30
+##   Treated        36        20
+##   Untreated      23        37
 ##                                           
-##                Accuracy : 0.5776          
-##                  95% CI : (0.4824, 0.6687)
+##                Accuracy : 0.6293          
+##                  95% CI : (0.5347, 0.7171)
 ##     No Information Rate : 0.5086          
-##     P-Value [Acc &gt; NIR] : 0.0816          
+##     P-Value [Acc &gt; NIR] : 0.00587         
 ##                                           
-##                   Kappa : 0.1537          
-##  Mcnemar&#39;s Test P-Value : 0.5677          
+##                   Kappa : 0.2591          
+##  Mcnemar&#39;s Test P-Value : 0.76037         
 ##                                           
-##             Sensitivity : 0.6271          
-##             Specificity : 0.5263          
-##          Pos Pred Value : 0.5781          
-##          Neg Pred Value : 0.5769          
+##             Sensitivity : 0.6102          
+##             Specificity : 0.6491          
+##          Pos Pred Value : 0.6429          
+##          Neg Pred Value : 0.6167          
 ##              Prevalence : 0.5086          
-##          Detection Rate : 0.3190          
-##    Detection Prevalence : 0.5517          
-##       Balanced Accuracy : 0.5767          
+##          Detection Rate : 0.3103          
+##    Detection Prevalence : 0.4828          
+##       Balanced Accuracy : 0.6296          
 ##                                           
 ##        &#39;Positive&#39; Class : Treated         
 ## </code></pre>
@@ -626,25 +631,25 @@ names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39
 ## 
 ##            Reference
 ## Prediction  Treated Untreated
-##   Treated        39        18
-##   Untreated      20        39
+##   Treated        40        15
+##   Untreated      19        42
 ##                                           
-##                Accuracy : 0.6724          
-##                  95% CI : (0.5791, 0.7567)
+##                Accuracy : 0.7069          
+##                  95% CI : (0.6152, 0.7877)
 ##     No Information Rate : 0.5086          
-##     P-Value [Acc &gt; NIR] : 0.0002605       
+##     P-Value [Acc &gt; NIR] : 1.114e-05       
 ##                                           
-##                   Kappa : 0.345           
-##  Mcnemar&#39;s Test P-Value : 0.8711315       
+##                   Kappa : 0.4143          
+##  Mcnemar&#39;s Test P-Value : 0.6069          
 ##                                           
-##             Sensitivity : 0.6610          
-##             Specificity : 0.6842          
-##          Pos Pred Value : 0.6842          
-##          Neg Pred Value : 0.6610          
+##             Sensitivity : 0.6780          
+##             Specificity : 0.7368          
+##          Pos Pred Value : 0.7273          
+##          Neg Pred Value : 0.6885          
 ##              Prevalence : 0.5086          
-##          Detection Rate : 0.3362          
-##    Detection Prevalence : 0.4914          
-##       Balanced Accuracy : 0.6726          
+##          Detection Rate : 0.3448          
+##    Detection Prevalence : 0.4741          
+##       Balanced Accuracy : 0.7074          
 ##                                           
 ##        &#39;Positive&#39; Class : Treated         
 ## </code></pre>
@@ -655,25 +660,25 @@ names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39
 ## 
 ##            Reference
 ## Prediction  Treated Untreated
-##   Treated        44        31
-##   Untreated      15        26
+##   Treated        40        33
+##   Untreated      19        24
 ##                                           
-##                Accuracy : 0.6034          
-##                  95% CI : (0.5084, 0.6931)
+##                Accuracy : 0.5517          
+##                  95% CI : (0.4566, 0.6441)
 ##     No Information Rate : 0.5086          
-##     P-Value [Acc &gt; NIR] : 0.02526         
+##     P-Value [Acc &gt; NIR] : 0.20175         
 ##                                           
-##                   Kappa : 0.2029          
-##  Mcnemar&#39;s Test P-Value : 0.02699         
+##                   Kappa : 0.0994          
+##  Mcnemar&#39;s Test P-Value : 0.07142         
 ##                                           
-##             Sensitivity : 0.7458          
-##             Specificity : 0.4561          
-##          Pos Pred Value : 0.5867          
-##          Neg Pred Value : 0.6341          
+##             Sensitivity : 0.6780          
+##             Specificity : 0.4211          
+##          Pos Pred Value : 0.5479          
+##          Neg Pred Value : 0.5581          
 ##              Prevalence : 0.5086          
-##          Detection Rate : 0.3793          
-##    Detection Prevalence : 0.6466          
-##       Balanced Accuracy : 0.6010          
+##          Detection Rate : 0.3448          
+##    Detection Prevalence : 0.6293          
+##       Balanced Accuracy : 0.5495          
 ##                                           
 ##        &#39;Positive&#39; Class : Treated         
 ## </code></pre>
@@ -684,25 +689,25 @@ names(train.res.df) &lt;- c(&#39;Type&#39;, &#39;PRI&#39;, &#39;MCARI&#39;, &#39
 ## 
 ##            Reference
 ## Prediction  Treated Untreated
-##   Treated        54         7
-##   Untreated       5        50
+##   Treated        51         6
+##   Untreated       8        51
 ##                                           
-##                Accuracy : 0.8966          
-##                  95% CI : (0.8263, 0.9454)
+##                Accuracy : 0.8793          
+##                  95% CI : (0.8058, 0.9324)
 ##     No Information Rate : 0.5086          
 ##     P-Value [Acc &gt; NIR] : &lt;2e-16          
 ##                                           
-##                   Kappa : 0.7929          
-##  Mcnemar&#39;s Test P-Value : 0.7728          
+##                   Kappa : 0.7587          
+##  Mcnemar&#39;s Test P-Value : 0.7893          
 ##                                           
-##             Sensitivity : 0.9153          
-##             Specificity : 0.8772          
-##          Pos Pred Value : 0.8852          
-##          Neg Pred Value : 0.9091          
+##             Sensitivity : 0.8644          
+##             Specificity : 0.8947          
+##          Pos Pred Value : 0.8947          
+##          Neg Pred Value : 0.8644          
 ##              Prevalence : 0.5086          
-##          Detection Rate : 0.4655          
-##    Detection Prevalence : 0.5259          
-##       Balanced Accuracy : 0.8962          
+##          Detection Rate : 0.4397          
+##    Detection Prevalence : 0.4914          
+##       Balanced Accuracy : 0.8796          
 ##                                           
 ##        &#39;Positive&#39; Class : Treated         
 ## </code></pre>
