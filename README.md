@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/92111648.svg)](https://zenodo.org/badge/latestdoi/92111648)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2094120.svg)](https://zenodo.org/record/2094120#.XAzELeIxmUk)
 
 
 ## This repository contains code needed to reproduce the article:

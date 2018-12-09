@@ -14,8 +14,9 @@
 # Oldeland, J., 2018a. Detecting myrtle rust ( Austropuccinia psidii ) on lemon myrtle trees using 
 # spectral signatures and machine learning. Plant Pathol. https://doi.org/10.1111/ppa.12830
 #
-# Heim, R.H.J., Wright, I.J., Geedicke, I., Falster, D.S., Allen, A., Oldeland, J., 2018b.
-# ...
+# Heim, RHJ; Wright, IJ; Allen, AP; Geedicke, I and Oldeland, J. (2018) 
+# Developing a spectral disease index for myrtle rust (*Austropuccinia psidii*), 
+# Plant Pathology, XX(xx), pp. XXX. doi: XXX.
 #
 # The following code is structured according to the Method section (Fig. 2 A and B) in 
 # Heim et al. (2018b)
