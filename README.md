@@ -14,8 +14,8 @@ Find the article [HERE](http://XXX)
     
 1. For access to the source code, see `Analysis_LMMR.R` file or [source code](https://github.com/ReneHeim/RustIndex/blob/master/Analysis_LMMR.R)  
 2. For access to the raw data, see *data* folder or [raw data](https://github.com/ReneHeim/RustIndex/tree/master/data) 
-3. Further general instructions and details on our data or code can be found 
-in our [research compendium](https://reneheim.github.io/RustIndex/data.html)
+3. For **instructions** to run the code and details on our data, please visit our 
+[research compendium](https://reneheim.github.io/RustIndex/code.html)
     
 ***
 When using the [raw data](https://github.com/ReneHeim/RustIndex/tree/master/data),
