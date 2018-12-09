@@ -50,10 +50,10 @@ library(magrittr)
 
 # 2. Loading Functions and set project structure-----------------------------------------------------
 
-source('R/20170601_FUN_DropCatVar.R')
-source('R/20170601_FUN_exportVSURF.R')
-source('R/20171224_FUN_raw2speclibhsdar.R')
-source('R/20171224_FUN_prepggwide2long.R')
+source('R/FUN_drop_cat_var.R')
+source('R/FUN_exportVSURF.R')
+source('R/FUN_raw2speclibhsdar.R')
+source('R/FUN_prepggwide2long.R')
 
 dir.create('output', FALSE, FALSE) # Code generated output
 
@@ -391,7 +391,10 @@ pspec <- ggplot(spectra.gg, aes(Wavelength, Reflectance, colour = Type)) +
     alpha = .5
   ) +
   theme_set(theme_bw(base_size = 20))+
-  theme(legend.position = c(.90, .88), legend.title = element_blank(), legend.background = element_blank())
+  theme(legend.position = c(.90, .88), 
+        legend.title = element_blank(), 
+        legend.background = element_blank())+
+  labs(x = "Wavelength [nm]", y = "Reflectance [%]")
 
 pspec
   
