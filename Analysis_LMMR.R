@@ -443,15 +443,15 @@ plot.res <- ggdraw() +
     draw_plot(p6, x = .5, y = .5, width = .25, height = .5) +
     draw_plot(p7, x = .75, y = .5, width = .25, height = .5) +
       draw_plot(pspec, x = 0, y = 0, width = 1, height = 0.5) +
-        draw_plot_label(label = c("A", "B", "C", "D", "E"), size = 12,
-                        x = c(0, 0.25, 0.5, 0.75, 0), y = c(1, 1, 1, 1, 0.5))
+        draw_plot_label(label = c("(a)", "(b)", "(c)", "(d)", "(e)"), size = 12,
+                        x = c(0, 0.23, 0.48, 0.73, 0), y = c(1, 1, 1, 1, 0.5))
   
 plot.res
   
-ggsave("output/Figure2.boxspectra.png",
+ggsave("output/Figure2.boxspectra.pdf",
     plot = plot.res,
     width = 40,
     height = 20,
     units = "cm",
-    dpi = 400
+    dpi = 600
   )
