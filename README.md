@@ -5,9 +5,9 @@
 
 Heim, RHJ; Wright, IJ; Allen, AP; Geedicke, I and Oldeland, J. (2018) 
 Developing a spectral disease index for myrtle rust (*Austropuccinia psidii*), 
-Plant Pathology, XX(xx), pp. XXX. doi: XXX.
+Plant Pathology, XX(xx), pp. XXX. doi: 10.1111/ppa.12996.
 
-Find the article [HERE](http://XXX)
+Find the article [HERE]( https://doi.org/10.1111/ppa.12996)
 
 * This repository follows the principles of reproducible research ([Peng, 2011](http://www.sciencemag.org/content/334/6060/1226)).
 ***
